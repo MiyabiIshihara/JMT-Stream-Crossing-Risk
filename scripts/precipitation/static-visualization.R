@@ -1,5 +1,5 @@
 # static visualization of precipitation 
-
+# run this after preprocessing.R
 
 # 
 library(usmap)
@@ -16,6 +16,3 @@ ggplot(data = seasonal_df, aes(x = longitude, y = latitude)) +
   geom_polygon(data = state_df, aes(x = long, y = lat, group = group), 
                fill = NA, color = "grey50") + 
   facet_grid(. ~ season)
-
-
-head(seasonal_df)
