@@ -48,79 +48,87 @@ library(mapview)
   jmt_dem <- mosaic(n37w119, n37w120,
                     n38w119, n38w120,
                     n39w120, fun = mean)
+  
+  writeRaster(jmt_dem, "C:/Users/chris_hoover/Desktop/Me/Other/JMT_analyze/Data/DEM_Hydrology/jmt_dem.tif")
 
 # Process DEM to produce relevant hydrological layers #################  
-  setwd("")
-z=raster("JMT_mosaic1.tif")
+  setwd("C:/Users/chris_hoover/Desktop/Me/Other/JMT_analyze/Data/DEM_Hydrology")
+  
+  z=raster("jmt_dem.tif")
 #plot(z)
 
 # Pitremove
-  system("mpiexec -n 8 pitremove -z JMT_mosaic1.tif -fel JMT_mosaic1fel.tif")
-  fel=raster("JMT_mosaic1fel.tif")
+  system("mpiexec -n 8 pitremove -z jmt_dem.tif -fel jmt_demfel.tif")
+  fel=raster("jmt_demfel.tif")
   #plot(fel)
 
 
 # D8 flow directions
-  system("mpiexec -n 8 D8Flowdir -p JMT_mosaic1p.tif -sd8 JMT_mosaic1sd8.tif -fel JMT_mosaic1fel.tif",
+  system("mpiexec -n 8 D8Flowdir -p jmt_demp.tif -sd8 jmt_demsd8.tif -fel jmt_demfel.tif",
          show.output.on.console=F,invisible=F)
-  p=raster("JMT_mosaic1p.tif")
+  p=raster("jmt_demp.tif")
   #plot(p)
-  sd8=raster("JMT_mosaic1sd8.tif")
+  sd8=raster("jmt_demsd8.tif")
   #plot(sd8)
 
 # Contributing area
-  system("mpiexec -n 8 AreaD8 -p JMT_mosaic1p.tif -ad8 JMT_mosaic1ad8.tif")
-  ad8=raster("JMT_mosaic1ad8.tif")
+  system("mpiexec -n 8 AreaD8 -p jmt_demp.tif -ad8 jmt_demad8.tif")
+  ad8=raster("jmt_demad8.tif")
   #plot(log(ad8))
   #zoom(log(ad8))
 
 
 # Grid Network 
-  system("mpiexec -n 8 Gridnet -p JMT_mosaic1p.tif -gord JMT_mosaic1gord.tif -plen JMT_mosaic1plen.tif -tlen JMT_mosaic1tlen.tif")
-  gord=raster("JMT_mosaic1gord.tif")
+  system("mpiexec -n 8 Gridnet -p jmt_demp.tif -gord jmt_demgord.tif -plen jmt_demplen.tif -tlen jmt_demtlen.tif")
+  gord=raster("jmt_demgord.tif")
   
 #Convert stream order from grid to shapefile
-  gord13 <- rasterToPolygons(gord, fun = function(x){x==13})
-  gord12 <- rasterToPolygons(gord, fun = function(x){x==12})
-  gord11 <- rasterToPolygons(gord, fun = function(x){x==11})
-  gord10 <- rasterToPolygons(gord, fun = function(x){x==10})
-  gord9 <- rasterToPolygons(gord, fun = function(x){x==9})
-  gord8 <- rasterToPolygons(gord, fun = function(x){x==8})
-  gord7 <- rasterToPolygons(gord, fun = function(x){x==7})
-  gord6 <- rasterToPolygons(gord, fun = function(x){x==6})
-  gord5 <- rasterToPolygons(gord, fun = function(x){x==5})
+  #max_order = cellStats(gord, max)
+  
+  #gord12 <- rasterToPolygons(gord, fun = function(x){x==max_order})
+  #gord11 <- rasterToPolygons(gord, fun = function(x){x==(max_order - 1)})
+  #gord10 <- rasterToPolygons(gord, fun = function(x){x==(max_order - 2)})
+  #gord9 <- rasterToPolygons(gord, fun = function(x){x==(max_order - 3)})
+  #gord8 <- rasterToPolygons(gord, fun = function(x){x==(max_order - 4)})
+  #gord7 <- rasterToPolygons(gord, fun = function(x){x==(max_order - 5)})
+  #gord6 <- rasterToPolygons(gord, fun = function(x){x==(max_order - 6)})
+  #gord5 <- rasterToPolygons(gord, fun = function(x){x==(max_order - 7)})
 
+  #stream_grid <- bind(gord12, gord11, gord10, gord9, gord8, gord7, gord6, gord5)
+  
 # DInf flow directions
-  system("mpiexec -n 8 DinfFlowdir -ang JMT_mosaic1ang.tif -slp JMT_mosaic1slp.tif -fel JMT_mosaic1fel.tif", show.output.on.console=F,invisible=F)
-    ang=raster("JMT_mosaic1ang.tif")
+  system("mpiexec -n 8 DinfFlowdir -ang jmt_demang.tif -slp jmt_demslp.tif -fel jmt_demfel.tif", show.output.on.console=F,invisible=F)
+    ang=raster("jmt_demang.tif")
     #plot(ang)
-    slp=raster("JMT_mosaic1slp.tif")
+    slp=raster("jmt_demslp.tif")
     #plot(slp)
 
 
 # Dinf contributing area
-  system("mpiexec -n 8 AreaDinf -ang JMT_mosaic1ang.tif -sca JMT_mosaic1sca.tif")
-  sca=raster("JMT_mosaic1sca.tif")
+  system("mpiexec -n 8 AreaDinf -ang jmt_demang.tif -sca jmt_demsca.tif")
+  sca=raster("jmt_demsca.tif")
   #plot(log(sca))
   #zoom(log(sca))
 
 # Threshold
-  system("mpiexec -n 8 Threshold -ssa JMT_mosaic1ad8.tif -src JMT_mosaic1src.tif -thresh 100")
-  src=raster("JMT_mosaic1src.tif")
+  system("mpiexec -n 8 Threshold -ssa jmt_demad8.tif -src jmt_demsrc.tif -thresh 100")
+  src=raster("jmt_demsrc.tif")
   #plot(src)
   #zoom(src)
 
 # import stream crossing shapefile for outlets
   #Needed to be transformed to same coordinate system as rasters
-    #crossings <- readOGR("JMT_Stream_Crossings.shp")
-      #crossings2 <- spTransform(crossings, crs(z))
-        #writeOGR(crossings2, ".", "JMT_Stream_Crossings_NAD83", driver="ESRI Shapefile")
+    #crossings <- readOGR("JMT_Main_Crossings.shp")
+      #crossings2 <- spTransform(crossings, "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+        #crossings3 <- spTransform(crossings2, crs(z))
+          #writeOGR(crossings3, ".", "JMT_Stream_Crossings_gcs", driver="ESRI Shapefile")
 
 # Move Outlets
-  system("mpiexec -n 8 moveoutletstostreams -p JMT_mosaic1p.tif -src JMT_mosaic1src.tif -o JMT_Stream_Crossings_NAD83.shp -om JMT_Stream_crossings_snap.shp")
+  #system("mpiexec -n 8 moveoutletstostreams -p jmt_demp.tif -src jmt_demsrc.tif -o JMT_Stream_Crossings_gcs.shp -om JMT_Stream_crossings_snap.shp")
   
+# some outlets were moved manually in ArcGIS afterwards to make sure they were lying on a source pixel corresponding to the right stream          
   outpt=readOGR("JMT_Stream_crossings_snap.shp")
-  approxpt=readOGR("JMT_Stream_Crossings_NAD83.shp")
+  approxpt=readOGR("JMT_Main_Crossings.shp")
 
 #plot(src)
 #points(outpt$shp[2],outpt$shp[3],pch=19,col=2)
@@ -129,25 +137,25 @@ z=raster("JMT_mosaic1.tif")
 #zoom(src)
 
 # Contributing area upstream of outlet
-system("mpiexec -n 8 Aread8 -p JMT_mosaic1p.tif -o JMT_Stream_crossings_snap.shp -ad8 JMT_mosaic1ssa.tif")
-  ssa=raster("JMT_mosaic1ssa.tif")
+system("mpiexec -n 8 Aread8 -p jmt_demp.tif -o JMT_Stream_crossings_snap.shp -ad8 jmt_demssa.tif")
+  ssa=raster("jmt_demssa.tif")
   plot(ssa) 
 
 
 # Threshold
-system("mpiexec -n 8 threshold -ssa JMT_mosaic1ssa.tif -src JMT_mosaic1src1.tif -thresh 2000")
-src1=raster("JMT_mosaic1src1.tif")
+system("mpiexec -n 8 threshold -ssa jmt_demssa.tif -src jmt_demsrc1.tif -thresh 2000")
+src1=raster("jmt_demsrc1.tif")
 plot(src1)
 zoom(src1)
 
 # Stream Reach and Watershed
-system("mpiexec -n 8 Streamnet -fel JMT_mosaic1fel.tif -p JMT_mosaic1p.tif -ad8 JMT_mosaic1ad8.tif -src JMT_mosaic1src1.tif -o outlet.shp -ord JMT_mosaic1ord.tif -tree JMT_mosaic1tree.txt -coord JMT_mosaic1coord.txt -net JMT_mosaic1net.shp -w JMT_mosaic1w.tif")
-plot(raster("JMT_mosaic1ord.tif"))
-zoom(raster("JMT_mosaic1ord.tif"))
-plot(raster("JMT_mosaic1w.tif"))
+system("mpiexec -n 8 Streamnet -fel jmt_demfel.tif -p jmt_demp.tif -ad8 jmt_demad8.tif -src jmt_demsrc1.tif -o outlet.shp -ord jmt_demord.tif -tree jmt_demtree.txt -coord jmt_demcoord.txt -net jmt_demnet.shp -w jmt_demw.tif")
+plot(raster("jmt_demord.tif"))
+zoom(raster("jmt_demord.tif"))
+plot(raster("jmt_demw.tif"))
 
 # Plot streams using stream order as width
-snet=read.shapefile("JMT_mosaic1net")
+snet=read.shapefile("jmt_demnet")
 ns=length(snet$shp$shp)
 for(i in 1:ns)
 {
@@ -155,29 +163,29 @@ for(i in 1:ns)
 }
 
 # Peuker Douglas stream definition
-system("mpiexec -n 8 PeukerDouglas -fel JMT_mosaic1fel.tif -ss JMT_mosaic1ss.tif")
-ss=raster("JMT_mosaic1ss.tif")
+system("mpiexec -n 8 PeukerDouglas -fel jmt_demfel.tif -ss jmt_demss.tif")
+ss=raster("jmt_demss.tif")
 plot(ss)
 zoom(ss)
 
 #  Accumulating candidate stream source cells
-system("mpiexec -n 8 Aread8 -p JMT_mosaic1p.tif -o outlet.shp -ad8 JMT_mosaic1ssa.tif -wg JMT_mosaic1ss.tif")
-ssa=raster("JMT_mosaic1ssa.tif")
+system("mpiexec -n 8 Aread8 -p jmt_demp.tif -o outlet.shp -ad8 jmt_demssa.tif -wg jmt_demss.tif")
+ssa=raster("jmt_demssa.tif")
 plot(ssa)
 
 #  Drop Analysis
-system("mpiexec -n 8 Dropanalysis -p JMT_mosaic1p.tif -fel JMT_mosaic1fel.tif -ad8 JMT_mosaic1ad8.tif -ssa JMT_mosaic1ssa.tif -drp JMT_mosaic1drp.txt -o outlet.shp -par 5 500 10 0")
+system("mpiexec -n 8 Dropanalysis -p jmt_demp.tif -fel jmt_demfel.tif -ad8 jmt_demad8.tif -ssa jmt_demssa.tif -drp jmt_demdrp.txt -o outlet.shp -par 5 500 10 0")
 
 # Deduce that the optimal threshold is 300 
 # Stream raster by threshold
-system("mpiexec -n 8 Threshold -ssa JMT_mosaic1ssa.tif -src JMT_mosaic1src2.tif -thresh 300")
-plot(raster("JMT_mosaic1src2.tif"))
+system("mpiexec -n 8 Threshold -ssa jmt_demssa.tif -src jmt_demsrc2.tif -thresh 300")
+plot(raster("jmt_demsrc2.tif"))
 
 # Stream network
-system("mpiexec -n 8 Streamnet -fel JMT_mosaic1fel.tif -p JMT_mosaic1p.tif -ad8 JMT_mosaic1ad8.tif -src JMT_mosaic1src2.tif -ord JMT_mosaic1ord2.tif -tree JMT_mosaic1tree2.dat -coord JMT_mosaic1coord2.dat -net JMT_mosaic1net2.shp -w JMT_mosaic1w2.tif -o Outlet.shp",show.output.on.console=F,invisible=F)
+system("mpiexec -n 8 Streamnet -fel jmt_demfel.tif -p jmt_demp.tif -ad8 jmt_demad8.tif -src jmt_demsrc2.tif -ord jmt_demord2.tif -tree jmt_demtree2.dat -coord jmt_demcoord2.dat -net jmt_demnet2.shp -w jmt_demw2.tif -o Outlet.shp",show.output.on.console=F,invisible=F)
 
-plot(raster("JMT_mosaic1w2.tif"))
-snet=read.shapefile("JMT_mosaic1net2")
+plot(raster("jmt_demw2.tif"))
+snet=read.shapefile("jmt_demnet2")
 ns=length(snet$shp$shp)
 for(i in 1:ns)
 {
@@ -185,12 +193,12 @@ for(i in 1:ns)
 }
 
 # Wetness Index
-system("mpiexec -n 8 SlopeAreaRatio -slp JMT_mosaic1slp.tif -sca JMT_mosaic1sca.tif -sar JMT_mosaic1sar.tif", show.output.on.console=F, invisible=F)
-sar=raster("JMT_mosaic1sar.tif")
+system("mpiexec -n 8 SlopeAreaRatio -slp jmt_demslp.tif -sca jmt_demsca.tif -sar jmt_demsar.tif", show.output.on.console=F, invisible=F)
+sar=raster("jmt_demsar.tif")
 wi=sar
 wi[,]=-log(sar[,])
 plot(wi)
 
 # Distance Down
-system("mpiexec -n 8 DinfDistDown -ang JMT_mosaic1ang.tif -fel JMT_mosaic1fel.tif -src JMT_mosaic1src2.tif -m ave v -dd JMT_mosaic1dd.tif",show.output.on.console=F,invisible=F)
-plot(raster("JMT_mosaic1dd.tif"))
+system("mpiexec -n 8 DinfDistDown -ang jmt_demang.tif -fel jmt_demfel.tif -src jmt_demsrc2.tif -m ave v -dd jmt_demdd.tif",show.output.on.console=F,invisible=F)
+plot(raster("jmt_demdd.tif"))
