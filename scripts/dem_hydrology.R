@@ -15,6 +15,8 @@ library(raster)
 library(shapefiles)
 library(rgdal)
 library(mapview)
+library(sf)
+library(tidyverse)
 
 # Get data #####################
 
@@ -136,69 +138,57 @@ library(mapview)
 
 #zoom(src)
 
-# Contributing area upstream of outlet
-system("mpiexec -n 8 Aread8 -p jmt_demp.tif -o JMT_Stream_crossings_snap.shp -ad8 jmt_demssa.tif")
+#Contributing area of all outlets
+  system("mpiexec -n 8 Aread8 -p jmt_demp.tif -o JMT_Stream_crossings_snap.shp -ad8 jmt_demssa.tif")
   ssa=raster("jmt_demssa.tif")
   plot(ssa) 
+  
+# Contributing area upstream of each outlet
 
+  for(i in 1:nrow(outpt)){  
+    shp_name <- gsub(" ", "_", outpt[i,]@data$JMT_Cross)
+    
+    # write shapefile of target outlet to same directory as flow direction tif
+      writeOGR(outpt[i,], ".", paste0(shp_name, "_outlet"), driver="ESRI Shapefile")
+    
+    # Run tauDEM contributing area exe
+      system(paste0("mpiexec -n 8 Aread8 -p jmt_demp.tif -o ", 
+                    shp_name, "_outlet.shp -ad8 ", 
+                    shp_name, "_ssa.tif"))
+      
+    # convert resulting watershed raster into shapefile
+      wtrshd <- raster(paste0(shp_name, "_ssa.tif"))
+      
+      wtrshd1 <- wtrshd > -Inf
+      
+      wtrshd_trim <- trim(wtrshd1)
+      
+      wtrshd_shp <- rasterToPolygons(wtrshd_trim, dissolve = T)
 
-# Threshold
-system("mpiexec -n 8 threshold -ssa jmt_demssa.tif -src jmt_demsrc1.tif -thresh 2000")
-src1=raster("jmt_demsrc1.tif")
-plot(src1)
-zoom(src1)
+    # write shapefile to watersheds directory
+      writeOGR(wtrshd_shp, ".", paste0("watersheds/", shp_name, "_watershed"), driver = "ESRI Shapefile")
+      
+      print(i)  
+  }
+  
+#Combine all individual watersheds into one shapefile
+  get_wtrshd <- function(file){
+    name <- strsplit(file, ".shp")[[1]]
+    
+    read_sf(paste0("watersheds/", file)) %>% 
+      mutate(crossing = gsub("_", " ", (strsplit(file, "_watershed.shp"))))
+  }
+  
+  wtrshd_files <- list.files("watersheds/")[grep(".shp", list.files("watersheds/"))]
+  
+  all_wtrshds <- lapply(wtrshd_files, get_wtrshd)
+  
+  wtrshds_merged <- do.call(rbind, all_wtrshds)
 
-# Stream Reach and Watershed
-system("mpiexec -n 8 Streamnet -fel jmt_demfel.tif -p jmt_demp.tif -ad8 jmt_demad8.tif -src jmt_demsrc1.tif -o outlet.shp -ord jmt_demord.tif -tree jmt_demtree.txt -coord jmt_demcoord.txt -net jmt_demnet.shp -w jmt_demw.tif")
-plot(raster("jmt_demord.tif"))
-zoom(raster("jmt_demord.tif"))
-plot(raster("jmt_demw.tif"))
+#Project and calulate area in square meters  
+  wtrshds_utm11N <- st_transform(wtrshds_merged, crs = "+proj=utm +zone=11 +ellps=GRS80 +datum=NAD83 +units=m +no_defs") %>% 
+    mutate(area = as.numeric(st_area(.)))
 
-# Plot streams using stream order as width
-snet=read.shapefile("jmt_demnet")
-ns=length(snet$shp$shp)
-for(i in 1:ns)
-{
-  lines(snet$shp$shp[[i]]$points,lwd=snet$dbf$dbf$Order[i])
-}
-
-# Peuker Douglas stream definition
-system("mpiexec -n 8 PeukerDouglas -fel jmt_demfel.tif -ss jmt_demss.tif")
-ss=raster("jmt_demss.tif")
-plot(ss)
-zoom(ss)
-
-#  Accumulating candidate stream source cells
-system("mpiexec -n 8 Aread8 -p jmt_demp.tif -o outlet.shp -ad8 jmt_demssa.tif -wg jmt_demss.tif")
-ssa=raster("jmt_demssa.tif")
-plot(ssa)
-
-#  Drop Analysis
-system("mpiexec -n 8 Dropanalysis -p jmt_demp.tif -fel jmt_demfel.tif -ad8 jmt_demad8.tif -ssa jmt_demssa.tif -drp jmt_demdrp.txt -o outlet.shp -par 5 500 10 0")
-
-# Deduce that the optimal threshold is 300 
-# Stream raster by threshold
-system("mpiexec -n 8 Threshold -ssa jmt_demssa.tif -src jmt_demsrc2.tif -thresh 300")
-plot(raster("jmt_demsrc2.tif"))
-
-# Stream network
-system("mpiexec -n 8 Streamnet -fel jmt_demfel.tif -p jmt_demp.tif -ad8 jmt_demad8.tif -src jmt_demsrc2.tif -ord jmt_demord2.tif -tree jmt_demtree2.dat -coord jmt_demcoord2.dat -net jmt_demnet2.shp -w jmt_demw2.tif -o Outlet.shp",show.output.on.console=F,invisible=F)
-
-plot(raster("jmt_demw2.tif"))
-snet=read.shapefile("jmt_demnet2")
-ns=length(snet$shp$shp)
-for(i in 1:ns)
-{
-  lines(snet$shp$shp[[i]]$points,lwd=snet$dbf$dbf$Order[i])
-}
-
-# Wetness Index
-system("mpiexec -n 8 SlopeAreaRatio -slp jmt_demslp.tif -sca jmt_demsca.tif -sar jmt_demsar.tif", show.output.on.console=F, invisible=F)
-sar=raster("jmt_demsar.tif")
-wi=sar
-wi[,]=-log(sar[,])
-plot(wi)
-
-# Distance Down
-system("mpiexec -n 8 DinfDistDown -ang jmt_demang.tif -fel jmt_demfel.tif -src jmt_demsrc2.tif -m ave v -dd jmt_demdd.tif",show.output.on.console=F,invisible=F)
-plot(raster("jmt_demdd.tif"))
+#Write final shapefile
+  st_write(wtrshds_utm11N, "watersheds/all_watersheds_UTM11N.shp")
+  
