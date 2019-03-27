@@ -13,8 +13,6 @@ load_geotiff_from_googledrive <- function(id){
 #load as raster object  
   out <- raster(temp)
 
-  unlink(temp)
-  
   return(out)
 }
 
