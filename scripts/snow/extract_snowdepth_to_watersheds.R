@@ -1,6 +1,6 @@
 # Script to extract snow depth characteristics in each watershed upstream of stream crossings for all of 2015
 
-source("scripts/load_data_from_googledrive.R")
+source("scripts/googledrive_read_write_functions.R")
 
 require(sf)
 require(tidyverse)
@@ -71,3 +71,19 @@ get_snodas_day <- function(date, variable, summary_fun){
       theme_classic() +
       theme(legend.position = "bottom")
   
+#Save two datasets
+  #SWE in each watershed over time in wide format
+    write_csv_to_googledrive(jmt_swe_2015, "jmt_watersheds_SWE_2015", 
+                             folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
+  
+  #SWE and SWE melt in each watershed over time in long format
+  jmt_swe_long <- jmt_swe_2015 %>% 
+    gather("watershed", "SWE", -Date) %>% 
+    group_by(watershed) %>% 
+    mutate(last_swe = dplyr::lag(SWE, order_by = watershed),
+           SWE_melt = -(SWE - last_swe)) %>% 
+      select(-last_swe)
+  
+    write_csv_to_googledrive(jmt_swe_long, "jmt_watersheds_SWE_2015_long", 
+                             folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
+    
