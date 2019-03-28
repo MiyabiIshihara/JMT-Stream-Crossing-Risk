@@ -38,3 +38,20 @@ load_rgdal_from_googledrive <- function(id){
   
   return(out)
 }
+
+write_csv_to_googledrive <- function(df, csv_name, folder_id){
+  
+  temp_file<-tempfile(pattern=csv_name, fileext = ".csv")
+  write.csv(df, file=temp_file, row.names=F)
+  
+  
+  #determining if the file you're writing is already in the folder on drive that you're writing to. If it is, you just update the current file so the id stays the same. Else, you create a new file
+  if(paste(csv_name,".csv", sep="") %in% data.frame(drive_ls(path =as_id(folder_id)))[,1]){
+    
+    file_id<-drive_ls(path =as_id(folder_id))[drive_ls(path =as_id(folder_id))[,1]==paste(df_name,".csv", sep=""),]$id
+    drive_update(file=as_id(file_id), media=temp_file)
+    
+  } else{
+  drive_upload(media=temp_file, name=paste(csv_name,".csv", sep=""),path = as_id(folder_id))
+  }
+}
