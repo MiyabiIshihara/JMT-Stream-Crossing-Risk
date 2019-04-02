@@ -55,3 +55,16 @@ write_csv_to_googledrive <- function(df, csv_name, folder_id){
   drive_upload(media=temp_file, name=paste(csv_name,".csv", sep=""),path = as_id(folder_id))
   }
 }
+
+load_csv_from_googledrive <- function(id){
+  
+temp <- tempfile(fileext = ".csv")
+
+  dl <- drive_download(as_id(id), path = temp, overwrite = TRUE)
+  
+  out <- read_csv(temp)
+  
+  unlink(temp)
+  
+  return(out)
+}
