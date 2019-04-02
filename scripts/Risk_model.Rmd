@@ -1,0 +1,13 @@
+---
+title: "Stream Crossing Risk Model"
+author: "Chris Hoover"
+date: "April 2, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("")
+
+require(tidyverse)
+```
