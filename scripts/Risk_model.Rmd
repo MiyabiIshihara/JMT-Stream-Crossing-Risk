@@ -7,7 +7,101 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-source("")
 
+source("googledrive_read_write_functions.R")
+
+require(lubridate)
 require(tidyverse)
+```
+
+# Model Specification  
+Available data on stream crossing risk is provided from John Ladd's JMT survey as a rating from 0-5 describing perceived difficulty of all stream crossings during the individual's trip. The stream crossing risk model will use this rating as the outcome, classifying any rating >1 as "risky" and any rating <=1 as not risky (to generate binary outcome). Covariates in the model will include individual hiker characteristics including: [] and an estimate of 
+
+```{r load_merge_data, message=FALSE, warning=FALSE}
+daily_snow_melt <- load_csv_from_googledrive("12qFuFl2Vj3jhJiGjjdviqT6xKw3oprZn")
+person_crossings <- load_csv_from_googledrive("12P_z60jhEPqWLpYr23l1w3fFZlMAzSbh")
+person_covariates <- load_csv_from_googledrive("1CmPS7bhIHSsy-6dkjfsSuZmYoYXcGOe8")
+
+merged_data <- person_crossings %>% 
+  left_join(person_covariates, by = c("person_id" = "UniqueID")) %>% 
+  left_join(daily_snow_melt, by = c("crossing_name" = "watershed",
+                                    "crossing_date" = "Date")) 
+model_data <- merged_data %>% 
+  group_by(person_id) %>% 
+  summarise(overall_stream_challenge = first(overall_stream_challenge),
+            peak_SWE_melt = max(SWE_melt),
+            mean_SWE_melt = mean(SWE_melt),
+            peak_melt_crossing = ifelse(peak_SWE_melt == 0, "Not Applicable", 
+                                        crossing_name[which(SWE_melt == peak_SWE_melt)]),
+            peak_SWE = max(SWE),
+            mean_SWE = mean(SWE),
+            peak_SWE_crossing = ifelse(peak_SWE == 0, "Not Applicable", 
+                                       crossing_name[which(SWE == peak_SWE)]),
+            gender = first(`Gender (compiled and best evidence)`),
+            age = first(`Age at entry TH`),
+            height_in = as.numeric(first(`What is your height? feet_y`))*12 + 
+                        as.numeric(first(`What is your height? inches_y`)),
+            weight = first(`What did you weigh at the start and end of your hike? (Estimates are acceptable.) Starting body weight`),
+            MPD = first(`Calc mean MPD`),
+            StartDate = as.Date(first(StartDate)),
+            start_week = week(StartDate)) %>% 
+  mutate(crossing_difficulty_binary = ifelse(overall_stream_challenge <= 1, 0, 1))
+```
+
+```{r descriptive}
+table(model_data$overall_stream_challenge)
+
+table(model_data$peak_SWE_crossing)
+```
+
+Individuals whose peak snow melt across all crossings was 0 (implying there was no snow melt) were labeled as "Not Applicable". Among those who did experience snow melt at crossings, most appear to experience it at Ireland Creek, Hilgard Branch, South Fork Kings, Bear, and Bubbs creeks
+
+```{r more descriptive}
+model_data %>% 
+  filter(peak_SWE_melt > 0) %>% 
+  ggplot(aes(peak_SWE_melt)) + geom_histogram() + theme_classic()
+
+model_data %>% 
+  ggplot(aes(start_week)) + geom_histogram() + theme_classic() 
+
+model_data %>% 
+  ggplot(aes(height_in)) + geom_histogram() + theme_classic() 
+
+model_data %>% 
+  ggplot(aes(age)) + geom_histogram() + theme_classic() 
+
+```
+
+
+```{r init_bin_mod}
+crossing_difficulty_bin_mod <- glm(crossing_difficulty_binary ~ peak_SWE_melt,
+                               family = "binomial", data = model_data)
+  summary(crossing_difficulty_bin_mod)
+```
+
+Very small, but highly significant increase in odds of rating streams as >1 associated with increased now melt experienced. Let's look at a linear model, which assumes that rating 0-5 is continuous (which we know isn't true) but is worth checking out regardless.
+
+```{r init_lin_mod}
+model_data %>% 
+  ggplot(aes(x = peak_SWE_melt, y = overall_stream_challenge, col = peak_melt_crossing)) +
+    geom_point() +
+    theme_classic() +
+    theme(legend.position = "bottom")
+
+crossing_difficulty_lin_mod <- lm(overall_stream_challenge ~ peak_SWE_melt,
+                               data = model_data)
+  summary(crossing_difficulty_lin_mod)
+
+```
+
+```{r adjust_bin_mod}
+crossing_difficulty_bin_mod_adj <- glm(crossing_difficulty_binary ~ peak_SWE_melt + gender + age + height_in + weight + start_week,
+                               family = "binomial", data = model_data)
+  summary(crossing_difficulty_bin_mod_adj)
+```
+
+```{r adjust_linin_mod}
+crossing_difficulty_lin_mod_adj <- lm(overall_stream_challenge ~ peak_SWE_melt + gender + age + height_in + weight + start_week,
+                                      data = model_data)
+  summary(crossing_difficulty_lin_mod_adj)
 ```
