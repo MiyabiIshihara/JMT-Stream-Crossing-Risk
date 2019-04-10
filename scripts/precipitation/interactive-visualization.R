@@ -1,54 +1,52 @@
 # 
-# map of precipitation in JMT area
+# Map of precipitation in JMT area
+# Source a file that imports prism precipitation data
+# This may take a couple of minutes to run
+source("scripts/precipitation/preprocessing_prism.R")
 
 library(shiny)
 library(usmap)
 library(ggplot2)
+library(leaflet)
+library(raster)
+library(rgdal)
+library(tidyverse)
+library(plyr)
+library(leaflet)
 
-head(seasonal_df)
 
 # ----------------- # 
 ui <- pageWithSidebar(
   headerPanel('Precipitation'),
   sidebarPanel(
     sliderInput(inputId = 'time', label = 'Time Range', 
-                min = as.Date("2014-12-01"), max = as.Date("2015-11-30"), 
-                value = as.Date(c("2014-12-01", "2015-11-30")), 
+                min = as.Date("2015-01-01"), max = as.Date("2015-12-31"), 
+                value = as.Date(c("2015-01-01")), 
                 timeFormat = '%Y-%m-%d')
   ),
   mainPanel(
-    plotOutput('plot1')
+    leafletOutput('plot1')
   )
 )
 
 
 
 # ----------------- # 
-server <- function(input, output, session) {
-  
-  # # Combine the selected variables into a new data frame
-  # selectedData <- reactive({
-  #   seasonal_df %>% filter(input$time == time)
-  # })
-  
-  output$plot1 <- renderPlot({
-    # subset data 
-    selectedData <- reactive({
-      newData <- seasonal_df %>% 
-        filter(input$time == time) %>% 
-        mutate(mean = mean(precipitation, na.rm = T))
-      return(newData)
-    })
 
-    
-    # make plot
-    state_df <- map_data("state", region = "California")
-    
-    plot <- ggplot(selectedData(), aes(x = longitude, y = latitude)) + 
-      geom_point(aes(stationID = stationID, col = mean), size = 1) + 
-      geom_polygon(data = state_df, aes(x = long, y = lat, group = group), 
-                   fill = NA, color = "grey50")
-    plot
+server <- function(input, output, session) {
+
+  # subset data 
+  selectedData <- reactive({
+    data[[which(names(data) %in% gsub("-", "", input$time))]]
+    #data[[which(names(data) == gsub("-", "", "2015-01-01"))]]
+  })
+  
+  output$plot1 <- renderLeaflet({
+    pal <- colorNumeric(c("#0C2C84", "#41B6C4", "#FFFFFF"), 0:10,
+           na.color = "transparent")
+    leaflet() %>% addTiles() %>% 
+      addRasterImage(selectedData(), colors = pal, opacity = 0.8) %>% 
+      addLegend(pal = pal, values = values(selectedData()), title = "precipitation")
   })
 
   
