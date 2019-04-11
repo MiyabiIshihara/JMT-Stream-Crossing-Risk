@@ -3,6 +3,8 @@
 source("scripts/googledrive_read_write_functions.R")
 
 require(sf)
+require(lubridate)
+require(raster)
 require(tidyverse)
 
 # Get watersheds
@@ -42,20 +44,31 @@ get_snodas_day <- function(date, variable, summary_fun){
 }
 
 #Data frame to fill with total snow water equivalent estimates over time
-  jmt_swe_2015 <- as.data.frame(matrix(nrow = length(dates_2015),
-                                       ncol = nrow(jmt_watersheds)+1))
-    jmt_swe_2015[,1] <- as.character(dates_2015)
-
-  jmt_fill <- t(sapply(dates_2015, get_snodas_day, variable = "SWE", summary_fun = sum))
+snodas_watershed_year <- function(dates, varble){
+  jmt_fill <- as.data.frame(matrix(nrow = length(dates),
+                                   ncol = nrow(jmt_watersheds)+1))
   
-  jmt_swe_2015[,2:26] <- jmt_fill
-
-  colnames(jmt_swe_2015) <- c("Date", as.character(jmt_watersheds$crossing))
+  jmt_fill[,1] <- as.character(dates)
   
-# Visualization of total SWE in each watershed over time
+    jmt_watersheds_swe <- t(sapply(dates_2015_18, 
+                                   get_snodas_day, 
+                                   variable = varble, summary_fun = sum))
+  
+  jmt_fill[,2:ncol(jmt_fill)] <- jmt_watersheds_swe
+  
+  colnames(jmt_fill) <- c("Date", as.character(jmt_watersheds$crossing))
+  
+  jmt_fill <- jmt_fill %>% mutate(Date = ymd(Date))
+  
+  return(jmt_fill)
+}
+
+jmt_swe_2015 <- snodas_watershed_year(dates_2015, "SWE")  
+
+# Visualization of total SWE in each watershed over time for 2015 (year we have survey data)
   jmt_swe_2015 %>% 
     gather("watershed", "SWE", -Date) %>% 
-    ggplot(aes(x = ymd(Date), y = SWE, col = watershed)) +
+    ggplot(aes(x = Date, y = SWE, col = watershed)) +
       geom_line(size = 1.2) +
       theme_classic() +
       theme(legend.position = "bottom")
@@ -66,7 +79,7 @@ get_snodas_day <- function(date, variable, summary_fun){
     group_by(watershed) %>% 
     mutate(last_swe = dplyr::lag(SWE, order_by = watershed),
            SWE_melt = -(SWE - last_swe)) %>% 
-    ggplot(aes(x = ymd(Date), y = SWE_melt, col = watershed)) +
+    ggplot(aes(x = Date, y = SWE_melt, col = watershed)) +
       geom_line(size = 1.2) +
       theme_classic() +
       theme(legend.position = "bottom")
@@ -86,4 +99,9 @@ get_snodas_day <- function(date, variable, summary_fun){
   
     write_csv_to_googledrive(jmt_swe_long, "jmt_watersheds_SWE_2015_long", 
                              folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
-    
+
+#Get other years of data
+  jmt_swe_2016 <- snodas_watershed_year(seq(ymd("2016-01-01"), ymd("2016-12-31"), "days"), "SWE")  
+  jmt_swe_2017 <- snodas_watershed_year(seq(ymd("2017-01-01"), ymd("2017-12-31"), "days"), "SWE")  
+  jmt_swe_2018 <- snodas_watershed_year(seq(ymd("2018-01-01"), ymd("2018-12-31"), "days"), "SWE")  
+  
