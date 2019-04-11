@@ -15,7 +15,7 @@ require(tidyverse)
 ```
 
 # Model Specification  
-Available data on stream crossing risk is provided from John Ladd's JMT survey as a rating from 0-5 describing perceived difficulty of all stream crossings during the individual's trip. The stream crossing risk model will use this rating as the outcome, classifying any rating >1 as "risky" and any rating <=1 as not risky (to generate binary outcome). Covariates in the model will include individual hiker characteristics including: [] and an estimate of 
+Available data on stream crossing risk is provided from John Ladd's JMT survey as a rating from 0-5 describing perceived difficulty of all stream crossings during the individual's trip. The stream crossing risk model will use this rating as the outcome, classifying any rating >1 as "risky" and any rating <=1 as not risky (to generate binary outcome). Covariates in the model will include individual hiker characteristics including: weight, height, age, gender and an estimate of 
 
 ```{r load_merge_data, message=FALSE, warning=FALSE}
 daily_snow_melt <- load_csv_from_googledrive("12qFuFl2Vj3jhJiGjjdviqT6xKw3oprZn")
@@ -43,9 +43,12 @@ model_data <- merged_data %>%
                         as.numeric(first(`What is your height? inches_y`)),
             weight = first(`What did you weigh at the start and end of your hike? (Estimates are acceptable.) Starting body weight`),
             MPD = first(`Calc mean MPD`),
+            Group_Size = first(`GrpSize AQ19  / Not counting any friends you first met on your hike, what was your group size when at its largest.`),
+            Experience = first()
             StartDate = as.Date(first(StartDate)),
             start_week = week(StartDate)) %>% 
-  mutate(crossing_difficulty_binary = ifelse(overall_stream_challenge <= 1, 0, 1))
+  mutate(crossing_difficulty_binary = ifelse(overall_stream_challenge <= 1, 0, 1),
+         crossing_difficulty_prop = overall_stream_challenge / 5)
 ```
 
 ```{r descriptive}
@@ -101,7 +104,19 @@ crossing_difficulty_bin_mod_adj <- glm(crossing_difficulty_binary ~ peak_SWE_mel
 ```
 
 ```{r adjust_linin_mod}
-crossing_difficulty_lin_mod_adj <- lm(overall_stream_challenge ~ peak_SWE_melt + gender + age + height_in + weight + start_week,
+crossing_difficulty_lin_mod_adj <- lm(overall_stream_challenge ~ 
+                                        peak_SWE_melt + gender + age + 
+                                        height_in + weight + start_week + 
+                                        MPD + Group_Size,
+                                      data = model_data)
+  summary(crossing_difficulty_lin_mod_adj)
+```
+
+```{r adjust_linin_mod_standardize}
+crossing_difficulty_lin_mod_adj <- lm(overall_stream_challenge ~ 
+                                        scale(peak_SWE_melt) + gender + scale(age) + 
+                                        scale(height_in) + scale(weight) + scale(start_week) + 
+                                        scale(MPD) + scale(Group_Size),
                                       data = model_data)
   summary(crossing_difficulty_lin_mod_adj)
 ```
