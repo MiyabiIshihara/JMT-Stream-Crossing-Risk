@@ -50,7 +50,7 @@ snodas_watershed_year <- function(dates, varble){
   
   jmt_fill[,1] <- as.character(dates)
   
-    jmt_watersheds_swe <- t(sapply(dates_2015_18, 
+    jmt_watersheds_swe <- t(sapply(dates, 
                                    get_snodas_day, 
                                    variable = varble, summary_fun = sum))
   
@@ -63,9 +63,10 @@ snodas_watershed_year <- function(dates, varble){
   return(jmt_fill)
 }
 
+#Get 2015 data (year we have survey data) ##############
 jmt_swe_2015 <- snodas_watershed_year(dates_2015, "SWE")  
 
-# Visualization of total SWE in each watershed over time for 2015 (year we have survey data)
+# Visualization of total SWE in each watershed over time for 2015 
   jmt_swe_2015 %>% 
     gather("watershed", "SWE", -Date) %>% 
     ggplot(aes(x = Date, y = SWE, col = watershed)) +
@@ -100,8 +101,87 @@ jmt_swe_2015 <- snodas_watershed_year(dates_2015, "SWE")
     write_csv_to_googledrive(jmt_swe_long, "jmt_watersheds_SWE_2015_long", 
                              folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
 
-#Get other years of data
+#Get and save data from 2016 ###############
   jmt_swe_2016 <- snodas_watershed_year(seq(ymd("2016-01-01"), ymd("2016-12-31"), "days"), "SWE")  
-  jmt_swe_2017 <- snodas_watershed_year(seq(ymd("2017-01-01"), ymd("2017-12-31"), "days"), "SWE")  
-  jmt_swe_2018 <- snodas_watershed_year(seq(ymd("2018-01-01"), ymd("2018-12-31"), "days"), "SWE")  
+    
+# Visualization of total SWE in each watershed over time for 2015 
+  jmt_swe_2016 %>% 
+    gather("watershed", "SWE", -Date) %>% 
+    ggplot(aes(x = Date, y = SWE, col = watershed)) +
+      geom_line(size = 1.2) +
+      theme_classic() +
+      theme(legend.position = "bottom") +
+      labs(title = "Snow water equivalent in JMT watersheds, 2016")
+    
+    
+  #Save 
+  #SWE in each watershed over time in wide format
+    write_csv_to_googledrive(jmt_swe_2016, "jmt_watersheds_SWE_2016", 
+                             folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
   
+  #SWE and SWE melt in each watershed over time in long format
+  jmt_swe_long <- jmt_swe_2016 %>% 
+    gather("watershed", "SWE", -Date) %>% 
+    group_by(watershed) %>% 
+    mutate(last_swe = dplyr::lag(SWE, order_by = watershed),
+           SWE_melt = -(SWE - last_swe)) %>% 
+      select(-last_swe)
+  
+    write_csv_to_googledrive(jmt_swe_long, "jmt_watersheds_SWE_2016_long", 
+                             folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
+
+#Get and save data from 2017 ##############
+  jmt_swe_2017 <- snodas_watershed_year(seq(ymd("2017-01-01"), ymd("2017-12-31"), "days"), "SWE")  
+    
+# Visualization of total SWE in each watershed over time for 2015 
+  jmt_swe_2017 %>% 
+    gather("watershed", "SWE", -Date) %>% 
+    ggplot(aes(x = Date, y = SWE, col = watershed)) +
+      geom_line(size = 1.2) +
+      theme_classic() +
+      theme(legend.position = "bottom") +
+      labs(title = "Snow water equivalent in JMT watersheds, 2017")
+
+  #Save
+  #SWE in each watershed over time in wide format
+    write_csv_to_googledrive(jmt_swe_2017, "jmt_watersheds_SWE_2017", 
+                             folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
+  
+  #SWE and SWE melt in each watershed over time in long format
+  jmt_swe_long <- jmt_swe_2017 %>% 
+    gather("watershed", "SWE", -Date) %>% 
+    group_by(watershed) %>% 
+    mutate(last_swe = dplyr::lag(SWE, order_by = watershed),
+           SWE_melt = -(SWE - last_swe)) %>% 
+      select(-last_swe)
+  
+    write_csv_to_googledrive(jmt_swe_long, "jmt_watersheds_SWE_2017_long", 
+                             folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
+
+#Get and save data from 2018 ###################    
+  jmt_swe_2018 <- snodas_watershed_year(seq(ymd("2018-01-01"), ymd("2018-12-31"), "days"), "SWE")  
+    
+# Visualization of total SWE in each watershed over time for 2015 
+  jmt_swe_2018 %>% 
+    gather("watershed", "SWE", -Date) %>% 
+    ggplot(aes(x = Date, y = SWE, col = watershed)) +
+      geom_line(size = 1.2) +
+      theme_classic() +
+      theme(legend.position = "bottom") +
+      labs(title = "Snow water equivalent in JMT watersheds, 2018")
+  
+  #Save
+  #SWE in each watershed over time in wide format
+    write_csv_to_googledrive(jmt_swe_2018, "jmt_watersheds_SWE_2018", 
+                             folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
+  
+  #SWE and SWE melt in each watershed over time in long format
+  jmt_swe_long <- jmt_swe_2018 %>% 
+    gather("watershed", "SWE", -Date) %>% 
+    group_by(watershed) %>% 
+    mutate(last_swe = dplyr::lag(SWE, order_by = watershed),
+           SWE_melt = -(SWE - last_swe)) %>% 
+      select(-last_swe)
+  
+    write_csv_to_googledrive(jmt_swe_long, "jmt_watersheds_SWE_2018_long", 
+                             folder_id = "1bvrY-Be43gJOSkNNGhVjGhHX8AXFahzV")
