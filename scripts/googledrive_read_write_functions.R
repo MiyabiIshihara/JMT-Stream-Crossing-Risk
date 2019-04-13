@@ -39,6 +39,14 @@ load_rgdal_from_googledrive <- function(id){
   return(out)
 }
 
+
+
+
+
+
+
+
+
 write_csv_to_googledrive <- function(df, csv_name, folder_id){
   
   temp_file<-tempfile(pattern=csv_name, fileext = ".csv")
