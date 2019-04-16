@@ -68,8 +68,6 @@ load_Rdata_from_googledrive <- function(id){
   
   load(temp)
   
-  unlink(temp)
-  
 }
 
 
