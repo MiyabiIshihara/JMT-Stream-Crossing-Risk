@@ -1,8 +1,5 @@
 # 
-# Map of precipitation in JMT area
-# Source a file that imports prism precipitation data
-# This may take a couple of minutes to run
-source("scripts/precipitation/preprocessing_prism.R")
+# Visualization of precipitation
 
 library(shiny)
 library(usmap)
@@ -12,8 +9,8 @@ library(raster)
 library(rgdal)
 library(tidyverse)
 library(plyr)
-library(leaflet)
 
+data <- load("data/precip_data.RData")
 
 # ----------------- # 
 ui <- pageWithSidebar(

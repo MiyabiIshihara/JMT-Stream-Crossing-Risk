@@ -6,7 +6,9 @@ library(raster)
 library(rgdal)
 library(tidyverse)
 library(plyr)
-library(leaflet)
+require(readr)
+
+
 
 # download daily precipitation data from PRISM website
 # get_prism_dailys(type = "ppt", minDate = "2015-01-01", maxDate = "2015-12-31", keepZip = FALSE)
@@ -39,18 +41,7 @@ for(date in dates){
 proc.time() - ptm
 
 
-# precip_data <- do.call("rbind.fill", precip_data)
-# date_interval <- as.Date("2015-01-10")
-# sub_precip_data <- precip_data %>% 
-#   filter(date %in% date_interval)
-# 
-# ggplot() + 
-#   geom_raster(data = sub_precip_data, aes(x = lat, y = lon, fill = precip)) + 
-#   scale_fill_gradient(low = "white", high = "black") + 
-#   coord_quickmap() + 
-#   xlab("") + ylab("") + 
-#   theme_classic()
-
+# save(precip_data, file = "data/precip_data.RData")
 
 
 
