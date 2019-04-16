@@ -44,7 +44,7 @@ model_data <- merged_data %>%
             weight = first(`What did you weigh at the start and end of your hike? (Estimates are acceptable.) Starting body weight`),
             MPD = first(`Calc mean MPD`),
             Group_Size = first(`GrpSize AQ19  / Not counting any friends you first met on your hike, what was your group size when at its largest.`),
-            Experience = first()
+           # Experience = first(),
             StartDate = as.Date(first(StartDate)),
             start_week = week(StartDate)) %>% 
   mutate(crossing_difficulty_binary = ifelse(overall_stream_challenge <= 1, 0, 1),
