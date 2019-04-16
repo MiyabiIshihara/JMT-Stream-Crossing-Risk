@@ -1,6 +1,7 @@
 require(readr)
 require(googledrive)
 require(rgdal)
+require(dplyr)
 
 load_geotiff_from_googledrive <- function(id){
 
