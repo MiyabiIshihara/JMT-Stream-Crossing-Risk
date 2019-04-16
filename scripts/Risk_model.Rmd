@@ -110,6 +110,8 @@ crossing_difficulty_lin_mod_adj <- lm(overall_stream_challenge ~
                                         MPD + Group_Size,
                                       data = model_data)
   summary(crossing_difficulty_lin_mod_adj)
+  
+save(crossing_difficulty_lin_mod_adj, file = "risk_model_object.Rdata")  
 ```
 
 ```{r adjust_linin_mod_standardize}
