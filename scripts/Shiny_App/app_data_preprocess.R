@@ -1,4 +1,3 @@
-source("scripts/googledrive_read_write_functions.R")
 
 require(leaflet)
 require(sp)
@@ -6,7 +5,9 @@ require(sf)
 require(htmltools)
 require(tidyverse)
 
-# Get trail-related vector data from google drive to plot ###############
+source("scripts/googledrive_read_write_functions.R")
+
+# Get vector data from google drive to plot ###############
   # Actual JMT trail vector and entry trails
     jmt_trail <- load_rgdal_from_googledrive("1RJPvOwVY1mcfjKh1eVybZHfWuIX1jE23", "Trail Edges")
       jmt_trail <- spTransform(jmt_trail, "+proj=longlat +ellps=GRS80 +no_defs") %>% st_as_sf() %>% 
@@ -30,20 +31,36 @@ require(tidyverse)
       jmt_watersheds <- spTransform(jmt_watersheds, "+proj=longlat +ellps=GRS80 +no_defs") %>% st_as_sf() %>% 
         st_transform(crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
 
+#Function to get snowdepth raster for particular day ##########
+# Get data frame of googledrive ids for all the snowdepth rasters
+  snodas_gd_depth <- drive_ls(as_id("1_IxGme096iUx6JJQY0nhONKSzBWaiI3k"))
+      
+#function to get snowdepth geotiff on particular day
+get_snodas_tif <- function(date){
+    snodas_id <- snodas_gd_depth %>% 
+      slice(grep(date, name)) %>% 
+      pull(id)
+  
+    snodas_data <- load_geotiff_from_googledrive(snodas_id)
+
+    return(snodas_data)
+}
+    
+      
 # Make icon for stream crossings ############      
 crossingIcon <- makeIcon(
-  iconUrl = "Plots_Viz/River_Icon/Artboard 1.png",
-  iconRetinaUrl = "Plots_Viz/River_Icon/Artboard 1@2x.png",
+  iconUrl = "River_Icon/Artboard 1.png",
+  iconRetinaUrl = "River_Icon/Artboard 1@2x.png",
   iconHeight = 35, iconWidth = 20 
 )
 
 #Get precip data ########
-  temp <- tempfile(fileext = ".Rdata")
-  dl <- drive_download(as_id("1vkoGl-35k4BDk-9lM7_rw7sSXXX_8k9b"), path = temp, overwrite = TRUE)
-  load(temp)
-  unlink(temp)
+  #temp <- tempfile(fileext = ".Rdata")
+  #dl <- drive_download(as_id("1vkoGl-35k4BDk-9lM7_rw7sSXXX_8k9b"), path = temp, overwrite = TRUE)
+  #load(temp)
+  #unlink(temp)
       
 #Get Snodas data ###########
   
-#Save entire workspace to Rdata object   
+#Save entire workspace to Rdata object    #################
 save.image(file = "scripts/Shiny_App/shiny_data.Rdata")  
