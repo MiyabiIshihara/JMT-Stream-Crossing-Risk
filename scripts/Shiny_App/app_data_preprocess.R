@@ -15,21 +15,20 @@ source("scripts/googledrive_read_write_functions.R")
       
   #Subset trails to main JMT or access trails    
     jmt_access <- jmt_trail[which(jmt_trail$Type == "Access"),]
+      saveRDS(jmt_access, "scripts/Shiny_App/Data/jmt_access_trails.rds") 
+      
     jmt_main <- jmt_trail[which(jmt_trail$Type == "Main"),]
+      saveRDS(jmt_main, "scripts/Shiny_App/Data/jmt_main_trail.rds")  
     
-  # JMT Stream crossing points 
-    jmt_crossings <- load_rgdal_from_googledrive("1klB4m5GQVIv7sVaZnZzbbomnkqpfDih2")
-      jmt_crossings_simplify <- data.frame(lon = jmt_crossings@coords[,1], 
-                                           lat = jmt_crossings@coords[,2], 
-                                           Crossing = as.character(jmt_crossings$JMT_Cross),
-                                           popup_field = as.character(jmt_crossings$Down_Name)) %>% 
-        st_as_sf(coords = c("lon", "lat")) %>% 
-        st_set_crs("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-    
+  # JMT Stream crossing points are processed in crossings_add_field.R
+
   # Watersheds upstream of stream crossings  
     jmt_watersheds <- load_rgdal_from_googledrive("1yB7ww8YgWCAOHjeuCa4Xu6vIZPthO3aD")
       jmt_watersheds <- spTransform(jmt_watersheds, "+proj=longlat +ellps=GRS80 +no_defs") %>% st_as_sf() %>% 
         st_transform(crs = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+      
+      saveRDS(jmt_watersheds, "scripts/Shiny_App/Data/jmt_watersheds.rds")  
+  
 
 #Function to get snowdepth raster for particular day ##########
 # Get data frame of googledrive ids for all the snowdepth rasters
@@ -59,8 +58,3 @@ crossingIcon <- makeIcon(
   #dl <- drive_download(as_id("1vkoGl-35k4BDk-9lM7_rw7sSXXX_8k9b"), path = temp, overwrite = TRUE)
   #load(temp)
   #unlink(temp)
-      
-#Get Snodas data ###########
-  
-#Save entire workspace to Rdata object    #################
-save.image(file = "scripts/Shiny_App/shiny_data.Rdata")  
