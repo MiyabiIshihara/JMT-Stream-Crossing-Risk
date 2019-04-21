@@ -2,6 +2,7 @@ source("scripts/googledrive_read_write_functions.R")
 
 require(leaflet)
 require(sp)
+require(sf)
 require(htmltools)
 
 # Get vector data from google drive to plot ###############
