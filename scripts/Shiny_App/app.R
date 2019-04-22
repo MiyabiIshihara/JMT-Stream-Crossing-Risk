@@ -48,8 +48,14 @@ header <- dashboardHeader(title = "John Muir Trail Hazard Map")
 #### Sidebar content #### 
 sidebar <- dashboardSidebar(
   sidebarMenu(
-    menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
-    menuItem("Widgets", tabName = "widgets", icon = icon("th"))
+    menuItem("Planning Your Stream Crossings", 
+             tabName = "planning"), # icon = icon("dashboard")
+    menuItem("What Causes Risk?", 
+             tabName = "risk_cause"), # icon = icon("th") 
+    menuItem("Current Conditions", 
+             tabName = "current_conditions"), 
+    menuItem("About Us", 
+             tabName = "about_us")
   )
 )
 
@@ -57,35 +63,41 @@ sidebar <- dashboardSidebar(
 #### Body content #### 
 body <- dashboardBody(
   tabItems(
-    # First tab content -- Map 
-    tabItem(tabName = "dashboard",
+    # 1st tab content -- Planning Crossings 
+    tabItem(tabName = "planning",
             fluidRow(
               box(leafletOutput("plot1", height = 500)),
               
               box(
-                title = "Time Range",
+                title = "Select a date",
                 sliderInput(inputId = 'time', 
                             label = '', 
                             min = as.Date("2015-01-01"), 
                             max = as.Date("2015-12-31"), 
-                            value = as.Date(c("2015-01-01")), 
+                            value = as.Date(c("2015-05-20")), 
                             timeFormat = '%Y-%m-%d')
               ), 
               
-              box(title = "Variables to show", 
+              box(title = "Select ", 
                   radioButtons(inputId = "variable", 
                                label = "",
-                               choices = c("Precipitation" = "precip", 
-                                           "Snow Depth" = "snow_depth"), 
-                               selected = "precip"))
+                               choices = c("Snow Depth" = "snow_depth", 
+                                           "Precipitation" = "precip"), 
+                               selected = "snow_depth"))
             )
-    ),
+    ), 
     
-    # Second tab content
-    tabItem(tabName = "widgets",
-            h2("Widgets tab content")
+    # 2nd tab content -- What causes risk? 
+    tabItem(tabName = "risk_cause", 
+            includeMarkdown("docs/risk_cause.md")), 
+    
+    # 3rd tab content -- Current conditions
+    tabItem(tabName = "current_conditions"), 
+    
+    # 4th tab content -- About Us
+    tabItem(tabName = "about_us",
+                includeMarkdown("docs/about_us.md"))
     )
-  )
 )
 
 
