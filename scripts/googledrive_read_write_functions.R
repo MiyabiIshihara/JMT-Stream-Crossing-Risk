@@ -85,7 +85,8 @@ load_raster_from_bil_googledrive <- function(folder_id){
     }
   
   #get object from temp folder 
-    out <- raster(paste0(temp, "\\", file_names[which(grepl("_bil.bil", file_names))][1]))
+    out <- raster(paste0(temp, "\\", file_names[which(grepl("_bil.bil", file_names) & 
+                                                        !grepl(".aux.xml", file_names))]))
     
   return(out)
     
