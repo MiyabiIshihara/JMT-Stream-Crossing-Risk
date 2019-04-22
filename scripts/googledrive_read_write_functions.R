@@ -72,7 +72,7 @@ load_Rdata_from_googledrive <- function(id){
 
 load_raster_from_bil_googledrive <- function(folder_id){
   #Get all googledrive ids in the folder containing the shapefile
-    file_info <- drive_ls(as_id(id))
+    file_info <- drive_ls(as_id(folder_id))
     file_ids <- file_info$id
     file_names <- file_info$name
   
@@ -87,9 +87,9 @@ load_raster_from_bil_googledrive <- function(folder_id){
   #get object from temp folder 
     out <- raster(paste0(temp, "\\", file_names[which(grepl("_bil.bil", file_names))][1]))
     
-  unlink(temp)
-  
   return(out)
+    
+  unlink(temp, recursive = T)
     
 }
 
