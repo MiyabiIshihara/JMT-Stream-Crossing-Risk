@@ -7,6 +7,7 @@ library(rgdal)
 library(viridis)
 library(lubridate)
 library(tidyverse)
+library(htmltools)
 
 # Load data ###########
   jmt_crossings_simplify <- readRDS("Data/crossing_points.rds")
