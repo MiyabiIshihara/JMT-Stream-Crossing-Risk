@@ -92,4 +92,4 @@ get_snodas_tif <- function(date){
 # 2015 precipitation
   precip_2015_jmt <- lapply(dates_2015, precip_jmt_clip)
   
-  saveRDS(precip_2015_jmt, "scripts/Shiny_App/Data/precip_2015.rds")    
+  saveRDS(precip_2015_jmt, "scripts/Shiny_App/Data/prism_ppt_jmt_clip_2015.rds")    
