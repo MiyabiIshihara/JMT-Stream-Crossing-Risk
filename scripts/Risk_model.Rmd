@@ -14,8 +14,8 @@ require(lubridate)
 require(tidyverse)
 ```
 
-# Model Specification  
-Available data on stream crossing risk is provided from John Ladd's JMT survey as a rating from 0-5 describing perceived difficulty of all stream crossings during the individual's trip. The stream crossing risk model will use this rating as the outcome, classifying any rating >1 as "risky" and any rating <=1 as not risky (to generate binary outcome). Covariates in the model will include individual hiker characteristics including: weight, height, age, gender and an estimate of 
+# Risk Model from Survey Data  
+Available data on stream crossing risk is provided from John Ladd's JMT survey as a rating from 0-5 describing perceived difficulty of all stream crossings during the individual's trip. The stream crossing risk model will use this rating as the outcome, classifying any rating >1 as "risky" and any rating <=1 as not risky (to generate binary outcome). Covariates in the model will include individual hiker characteristics including: weight, height, age, gender and start date 
 
 ```{r load_merge_data, message=FALSE, warning=FALSE}
 daily_snow_melt <- load_csv_from_googledrive("12qFuFl2Vj3jhJiGjjdviqT6xKw3oprZn")
@@ -122,3 +122,57 @@ crossing_difficulty_lin_mod_adj <- lm(overall_stream_challenge ~
                                       data = model_data)
   summary(crossing_difficulty_lin_mod_adj)
 ```
+
+# Temp-melt model  
+In order to do any sort of predictions, have to be able to relate input variables to variables that are forecasted (like temperature). Attampe here to model snow melt in watersheds as a function of antecedent SWE and temperature  
+
+```{r temp_melt}
+daily_temp <- load_csv_from_googledrive("1GAmIE-5zCUjrLJebs4G-u9mT0qniL6B4")
+
+temp_melt_merge <- daily_temp %>% 
+  left_join(daily_snow_melt %>% filter(Date <= ymd("2016-01-01")), by = c("Date" = "Date",
+                                                                          "watershed" = "watershed"))
+
+temp_melt_merge %>% ggplot(aes(x = Mean_Temp, y = SWE_melt, col = watershed)) +
+  theme_classic() +
+  geom_point() +
+  stat_smooth(method = "lm")
+
+melt_glm <- lm(SWE_melt ~ SWE + Mean_Temp + watershed, data = temp_melt_merge)
+  summary(melt_glm)
+  
+# Looks like no significant differences between watersheds, so stick with simpler GLM
+  
+melt_glm2 <- lm(SWE_melt ~ SWE + Mean_Temp, data = temp_melt_merge)
+  summary(melt_glm2)
+  
+```
+
+Now see how well model predicts daily snow melt in next year  
+
+```{r temp_melt_pred}
+daily_temp2016 <- load_csv_from_googledrive("10_0uB8Qxv-AOZbI0MjjHgSnmeP7397D2")
+daily_snow_melt2016 <- load_csv_from_googledrive("10ATgwIxJ8cL_A9JcG9N3YajH8E4E087y")
+
+temp_melt_merge2016 <- daily_temp2016 %>% 
+  left_join(daily_snow_melt2016, by = c("Date" = "Date",
+                                        "watershed" = "watershed"))
+
+temp_melt_merge2016 <- temp_melt_merge2016 %>% 
+  mutate(swe_melt_pred = predict.lm(melt_glm2, newdata = temp_melt_merge2016))
+
+temp_melt_merge2016 %>% 
+  ggplot(aes(x = swe_melt_pred, y = SWE_melt)) +
+    theme_classic() + 
+    geom_point() +
+    stat_smooth(method = "lm")
+
+temp_melt_merge2016 %>% 
+  
+  ggplot(aes(x = Date, y = SWE_melt)) + 
+    theme_classic() +
+    geom_line() +
+    geom_line(aes(x = Date, y = swe_melt_pred), lty = 2) +
+    facet_wrap(~watershed)
+```
+
