@@ -10,7 +10,7 @@ library(rgdal)
 library(tidyverse)
 library(plyr)
 
-data <- load("data/precip_data.RData")
+# data <- load("data/precip_data.RData")
 
 # ----------------- # 
 ui <- pageWithSidebar(
@@ -35,7 +35,6 @@ server <- function(input, output, session) {
   # subset data 
   selectedData <- reactive({
     data[[which(names(data) %in% gsub("-", "", input$time))]]
-    #data[[which(names(data) == gsub("-", "", "2015-01-01"))]]
   })
   
   output$plot1 <- renderLeaflet({
