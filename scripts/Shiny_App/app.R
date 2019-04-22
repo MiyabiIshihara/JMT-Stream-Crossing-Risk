@@ -23,7 +23,7 @@ jmt_main <- readRDS("Data/jmt_main_trail.rds")
 jmt_access <- readRDS("Data/jmt_access_trails.rds")
 jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
 snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
-
+precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
 
 # Combine multiple data into a list
 data <- list("snow_depth" = snow_depth_2015_jmt, 

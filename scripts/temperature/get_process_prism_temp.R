@@ -8,7 +8,6 @@ library(tidyverse)
 
 source("scripts/googledrive_read_write_functions.R")
 
-
 #JMT extent  
   jmt_clipper <- extent(-120, -118, 36, 38)
 
@@ -27,7 +26,6 @@ get_prism_temp <- function(date){
   
   return(clipped_temp_rast)
   
-  file.remove(file.path("scripts/temperature/", list.files("scripts/temperature/")))
 }
 
 

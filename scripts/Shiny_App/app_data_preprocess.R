@@ -2,6 +2,7 @@
 require(leaflet)
 require(sp)
 require(sf)
+require(raster)
 require(htmltools)
 require(lubridate)
 require(tidyverse)
@@ -31,7 +32,7 @@ source("scripts/googledrive_read_write_functions.R")
       saveRDS(jmt_watersheds, "scripts/Shiny_App/Data/jmt_watersheds.rds")  
   
 
-#Function to get snowdepth raster for particular day ##########
+#Download and process snowdepth rasters ##########
 # Get data frame of googledrive ids for all the snowdepth rasters
   snodas_gd_depth <- drive_ls(as_id("1_IxGme096iUx6JJQY0nhONKSzBWaiI3k"))
       
@@ -65,15 +66,30 @@ get_snodas_tif <- function(date){
   
   saveRDS(snow_depth_2015_jmt, "scripts/Shiny_App/Data/snow_depth_2015.rds")    
       
-# Make icon for stream crossings ############      
-crossingIcon <- makeIcon(
-  iconUrl = "River_Icon/Artboard 1.png",
-  iconRetinaUrl = "River_Icon/Artboard 1@2x.png",
-  iconHeight = 35, iconWidth = 20 
-)
-
 #Get precip data ########
-  #temp <- tempfile(fileext = ".Rdata")
-  #dl <- drive_download(as_id("1vkoGl-35k4BDk-9lM7_rw7sSXXX_8k9b"), path = temp, overwrite = TRUE)
-  #load(temp)
-  #unlink(temp)
+# Get data frame of googledrive ids for all the snowdepth rasters
+  gd_precip <- drive_ls(as_id("16TsvJGV4YNxG6EER2RokJTOZMFurhsX4"))
+      
+# Function to download snowdepth raster and clip it
+  precip_jmt_clip <- function(date){
+    #Convert date input to character with no dashes
+    date_char <- gsub("-", "", as.character(date))
+    
+    #Find folder within googledrive that contains date
+    bil_id <- gd_precip$id[grepl(date_char, gd_precip$name)]
+    
+    print(c(date_char, bil_id))
+    
+    #Download raster from .bil in above folder
+    to_clip <- load_raster_from_bil_googledrive(bil_id)
+    
+    #clip raster and return
+    clipped <- crop(to_clip, jmt_clipper)
+    
+    return(clipped)
+  }
+  
+# 2015 precipitation
+  precip_2015_jmt <- lapply(dates_2015, precip_jmt_clip)
+  
+  saveRDS(precip_2015_jmt, "scripts/Shiny_App/Data/prism_ppt_jmt_clip_2015.rds")    
