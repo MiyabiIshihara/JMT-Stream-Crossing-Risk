@@ -70,6 +70,28 @@ load_Rdata_from_googledrive <- function(id){
   
 }
 
+load_raster_from_bil_googledrive <- function(folder_id){
+  #Get all googledrive ids in the folder containing the shapefile
+    file_info <- drive_ls(as_id(id))
+    file_ids <- file_info$id
+    file_names <- file_info$name
+  
+  #Create folder to place spatial files in    
+    temp <- tempdir()
+  
+  #Get all files in the google drive folder and put them in the temp folder  
+    for(i in 1:length(file_ids)){
+      drive_download(as_id(file_ids[i]), path = paste0(temp, "\\", file_names[i]), overwrite = TRUE)
+    }
+  
+  #get object from temp folder 
+    out <- raster(paste0(temp, "\\", file_names[which(grepl("_bil.bil", file_names))][1]))
+    
+  unlink(temp)
+  
+  return(out)
+    
+}
 
 write_csv_to_googledrive <- function(df, csv_name, folder_id){
   
