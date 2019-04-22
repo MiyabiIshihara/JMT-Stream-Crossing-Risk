@@ -1,6 +1,7 @@
 require(readr)
 require(googledrive)
 require(rgdal)
+require(dplyr)
 
 load_geotiff_from_googledrive <- function(id){
 
@@ -60,12 +61,14 @@ load_rgdal_from_googledrive <- function(id, layer_name = NA){
   return(out)
 }
 
+load_Rdata_from_googledrive <- function(id){
+  temp <- tempfile(fileext = ".Rdata")
 
-
-
-
-
-
+  dl <- drive_download(as_id(id), path = temp, overwrite = TRUE)
+  
+  load(temp)
+  
+}
 
 
 write_csv_to_googledrive <- function(df, csv_name, folder_id){
