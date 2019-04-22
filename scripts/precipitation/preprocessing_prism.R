@@ -16,21 +16,22 @@ require(readr)
 # create a vector of dates 
 dates_as_dates <- seq(as.Date("2015-01-01"), as.Date("2015-12-31"), by = 1)
 dates <- gsub("-", "", dates_as_dates)
-
+length(dates)
 
 # import daily precipitation data as a list
 data <- precip_data <- list()
 ptm <- proc.time()
-for(date in dates){
+for(i in 1:length(dates)){
+  date <- dates[i]
   # import daily precipitation data
-  data[[date]] <- raster(paste0("data/PRISM/PRISM_ppt_stable_4kmD2_", 
+  data[[date]] <- raster(paste0("../../data/PRISM/PRISM_ppt_stable_4kmD2_", 
                 date, "_bil", "/PRISM_ppt_stable_4kmD2_", date, "_bil.bil"))
   
   # convert coordinate system to WGS84
   crs(data[[date]]) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" 
 
   # crop to spatial extent of interest
-  #data[[date]] <- crop(data[[date]], extent(-120, -118, 36, 38))
+  data[[date]] <- crop(data[[date]], extent(-120, -118, 36, 38))
   
   # convert raster data to data frame
   precip_data[[date]] <- as.data.frame(data[[date]], xy = TRUE) %>% 
@@ -43,9 +44,7 @@ proc.time() - ptm
 
 # save(precip_data, file = "data/precip_data.RData")
 
-
-
-
+precip_2015_jmt <- data
 
 
 
