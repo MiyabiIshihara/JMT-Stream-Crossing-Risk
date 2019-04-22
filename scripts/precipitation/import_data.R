@@ -1,7 +1,7 @@
 # download precipitation data from Google Drive
 
 
-require(googledrive)
+library(googledrive)
 
 ########### 
 file_info <- drive_ls(as_id("1yr5xYEkd3ON6eD6pw3CQgEf7ciJRXnXM"))
