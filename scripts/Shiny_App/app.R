@@ -44,7 +44,7 @@ crossingIcon <- makeIcon(
 #                ui               # 
 # ------------------------------- # 
 #### Header content #### 
-header <- dashboardHeader(title = "John Muir Trail Hazard Map")
+header <- dashboardHeader(title = "John Muir Trail Hazard")
 
 
 #### Sidebar content #### 
