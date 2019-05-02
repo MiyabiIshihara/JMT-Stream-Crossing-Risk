@@ -12,7 +12,18 @@ library(lubridate)
 library(tidyverse)
 library(htmltools)
 library(dplyr)
+library(markdown)
 
+# colors <- list(
+#   logo = "",
+#   logoHover = "",
+#   collapseButton = "",
+#   collapseButtonHover = "",
+#   topBar = "",
+#   sideBar = "",
+#   
+#   
+# )
 
 # ------------------------------- # 
 #         import data             # 
@@ -22,8 +33,6 @@ jmt_crossings_simplify <- readRDS("Data/crossing_points.rds")
 jmt_all <- readRDS("Data/jmt_all_trail.rds")
 jmt_main <- jmt_all %>% filter(Type == 'Main')
 jmt_access <- jmt_all %>% filter(Type == 'Access')
-# jmt_main <- readRDS("Data/jmt_main_trail.rds")
-# jmt_access <- readRDS("Data/jmt_access_trails.rds")
 jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
 snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
 precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
@@ -38,85 +47,286 @@ data <- list("snow_depth" = snow_depth_2015_jmt,
 crossingIcon <- makeIcon(
   iconUrl = "River_Icon/Artboard 1.png",
   iconRetinaUrl = "River_Icon/Artboard 1@2x.png",
-  # iconHeight = 35, iconWidth = 20 
-  iconHeight = 17, iconWidth = 10
+  # iconHeight = 35,
+  # iconWidth = 20,
+  iconAnchorX = 5,
+  iconAnchorY = 30,
+  popupAnchorX = 6,
+  popupAnchorY = -35
+  
 )
+
+
+# ------------------------------- # 
+#         ui components           # 
+# ------------------------------- # 
+
+date_selector <- function(){
+  sliderInput(
+    inputId = 'time', 
+    label = '', 
+    min = as.Date("2015-01-01"), 
+    max = as.Date("2015-12-31"), 
+    value = as.Date(c("2015-05-20")), 
+    timeFormat = '%Y-%m-%d'
+  )
+}
+
+trip_selector <- function(){
+  column(
+    12,
+    fluidRow(
+      column(
+        8,
+        style='padding:0px;',
+        selectInput(
+          inputId = "start_th",
+          label = "Starting Trailhead:",
+          choices = sort(unique(route_info$`entry trailhead`)),
+          selected = "Happy Isles Trailhead"
+        )
+      ),
+      column(
+        4,
+        style='padding:0px;',
+        dateInput(
+          inputId="start_date",
+          label="Start Date:",
+          value=today("PMT")
+        )
+      )
+    ),
+
+    fluidRow(
+      column(
+        8,
+        style='padding:0px;',
+        selectInput(
+          inputId="end_th",
+          label="Ending Trailhead:",
+          choices=sort(unique(route_info$`exit trailhead`)),
+          selected="Whitney Portal"
+        )
+      ),
+      column(
+        4,
+        style='padding:0px;',
+        dateInput(
+          inputId="end_date",
+          label="End Date:",
+          value=(today("PMT") + 21)
+        )
+      )
+    )
+  )
+}
+
+raster_selector <- function(){
+  radioButtons(
+    inputId = "variable", 
+    label = "",
+    choices = c(
+      "Snow Depth" = "snow_depth", 
+      "Precipitation" = "precip"
+    ), 
+    selected = "snow_depth"
+  )
+}
+
+
 
 
 # ------------------------------- # 
 #                ui               # 
 # ------------------------------- # 
 #### Header content #### 
-header <- dashboardHeader(title = "John Muir Trail Hazard")
+header <- dashboardHeader(
+  title = "John Muir Trail Hazard",
+  titleWidth = 400)
 
 
 #### Sidebar content #### 
 sidebar <- dashboardSidebar(
-  sidebarMenu(
-    menuItem("Planning Your Stream Crossings", 
-             tabName = "planning"), # icon = icon("dashboard")
-    menuItem("What Causes Risk?", 
-             tabName = "risk_cause"), # icon = icon("th") 
-    menuItem("Current Conditions", 
-             tabName = "current_conditions"), 
-    menuItem("About Us", 
-             tabName = "about_us")
+  width = 400,
+
+  # Navigation
+  column(
+    12,
+    style = "background-color:#4372a7;",
+    
+    # Header
+    HTML(
+      markdownToHTML(
+        fragment.only=TRUE,
+        text=c(
+          "### Pages"
+        )
+      )
+    ),
+    
+    # Menu Items
+    sidebarMenu(
+      menuItem(
+        "Stream Crossing Map", 
+        tabName="planning"#,
+        # icon=icon("dashboard")
+      ),
+      menuItem(
+        "Historical Stream Flow", 
+        tabName="risk_cause"#,
+        # icon=icon("th")
+      ),
+      menuItem(
+        "Forecasted Stream Flow", 
+        tabName="current_conditions"
+      ),
+      menuItem(
+        "Stream Crossing Information", 
+        tabName="about_us"
+      ),
+      menuItem(
+        "About This Project", 
+        tabName="about_us"
+      )
+    )
+  ),
+  
+  # Spacing the same color as the Navigation
+  column(
+    12,
+    style = "background-color:#4372a7;",
+    HTML(
+      markdownToHTML(
+        fragment.only=TRUE, 
+        text=c(
+          "<br>"
+        )
+      )
+    )
+  ),
+  
+  # Spacing without a color
+  column(
+    12,
+    HTML(
+      markdownToHTML(
+        fragment.only=TRUE, 
+        text=c(
+          "<br>"
+        )
+      )
+    )
+  ),
+  
+  # Trip Planner
+  column(
+    12,
+    style = "background-color:#4372a7;",
+    HTML(
+      markdownToHTML(
+        fragment.only=TRUE, 
+        text=c(
+          "### Trip Planner"
+        )
+      )
+    ),
+    date_selector(),
+    trip_selector(),
+    raster_selector()
   )
 )
 
+main_map <- function(){
+  leafletOutput(
+    "main_map",
+  )
+}
 
-#### Body content #### 
+#### Body content ####
 body <- dashboardBody(
+  
   tabItems(
-    # 1st tab content -- Planning Crossings 
-    tabItem(tabName = "planning",
-            fluidRow(
-              box(leafletOutput("plot1", height = 500)),
-              
-              box(
-                title = "Select a date",
-                sliderInput(inputId = 'time', 
-                            label = '', 
-                            min = as.Date("2015-01-01"), 
-                            max = as.Date("2015-12-31"), 
-                            value = as.Date(c("2015-05-20")), 
-                            timeFormat = '%Y-%m-%d')
-              ), 
-              
-              box(title = "Select ", 
-                  radioButtons(inputId = "variable", 
-                               label = "",
-                               choices = c("Snow Depth" = "snow_depth", 
-                                           "Precipitation" = "precip"), 
-                               selected = "snow_depth")),
-              
-              box(title = "Enter Trip Information ", 
-                  selectInput(inputId = "start_th", 
-                               label = "Starting Trailhead:",
-                               choices = sort(unique(route_info$`entry trailhead`)), 
-                               selected = "Happy Isles Trailhead"),
-                  
-                  selectInput(inputId = "end_th", 
-                              label = "Ending Trailhead:",
-                              choices = sort(unique(route_info$`exit trailhead`)), 
-                              selected = "Whitney Portal")
-                  
-                  )
-            )
-    ), 
+    # 1st tab content -- Planning Crossings
+    tabItem(
+      tabName = "planning",
+      main_map()#,
+      # map_option_panel()
+    ),
     
-    # 2nd tab content -- What causes risk? 
-    tabItem(tabName = "risk_cause", 
-            includeMarkdown("docs/risk_cause.md")), 
+    # 2nd tab content -- What causes risk?
+    tabItem(
+      tabName="risk_cause",
+      includeMarkdown("docs/risk_cause.md")
+    ),
     
     # 3rd tab content -- Current conditions
-    tabItem(tabName = "current_conditions"), 
+    tabItem(
+      tabName = "current_conditions"
+    ),
     
     # 4th tab content -- About Us
-    tabItem(tabName = "about_us",
-                includeMarkdown("docs/about_us.md"))
+    tabItem(
+      tabName="about_us",
+      includeMarkdown("docs/about_us.md")
     )
+  ),
+  
+  # Force the map to fill the whole dashboard body
+  tags$style(type = "text/css", "#main_map {height: calc(100vh - 80px) !important;}"),
+  
+  # Custom UI colors
+  tags$head(
+    tags$style(
+      HTML(
+        '
+        /* logo */
+        .skin-blue .main-header .logo {
+        background-color: #173d69;
+        }
+
+        /* logo when hovered */
+        .skin-blue .main-header .logo:hover {
+        background-color: #1a487d;
+        }
+
+        /* navbar (rest of the header) */
+        .skin-blue .main-header .navbar {
+        background-color: #4372a7;
+        }
+
+        /* main sidebar */
+        .skin-blue .main-sidebar {
+        background-color: #173d69;
+        }
+
+        /* active selected tab in the sidebarmenu */
+        .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
+        background-color: #ffffff;
+        }
+
+        /* other links in the sidebarmenu */
+        .skin-blue .main-sidebar .sidebar .sidebar-menu a{
+        background-color: #598db8;
+        color: #000000;
+        }
+
+        /* other links in the sidebarmenu when hovered */
+        .skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
+        background-color: #66a1d2;
+        }
+
+        /* toggle button when hovered  */
+        .skin-blue .main-header .navbar .sidebar-toggle:hover{
+        background-color: #173d69;
+        }
+        '
+      )
+    )
+  )
 )
+
+  
+  
 
 
 ui <- dashboardPage(
@@ -124,7 +334,8 @@ ui <- dashboardPage(
   skin = "blue", 
   header, 
   sidebar, 
-  body)
+  body
+)
 
 
 
@@ -163,55 +374,97 @@ server <- function(input, output) {
     # Select the crossings involved with this route
     crossings <- jmt_crossings_simplify %>% slice(crossing_ids)
     # Return just the segments associated with the route
-    return(list('segments'=segments, 'crossings'=crossings))
+    return(list('segments'=segments, 'crossings'=crossings, 'bounds'=st_bbox(segments)))
   }
-  route = reactive({compileRoute(input$start_th, input$end_th)})
-
-  output$plot1 <- renderLeaflet({
-    pal <- colorNumeric("viridis", domain = c(0,2000),
-                        na.color = "transparent")
+  route <- reactive({compileRoute(input$start_th, input$end_th)})
+  
+  output$main_map <- renderLeaflet({
+    pal <- colorNumeric(
+      # "viridis",
+      palette = colorRamp(c("#FFFFFF", "#014175"), interpolate = "spline"),
+      domain=c(0,3000),
+      na.color="transparent"
+    )
+    
     leaflet() %>%
-      setView(lng = -118.869194, lat = 37.235921, zoom = 8) %>%
-      addProviderTiles(provider = "Esri.WorldTopoMap") %>%
-      addRasterImage(selectedData(),
-                     colors = pal,
-                     opacity = 0.4,
-                     maxBytes = 10 * 1024 * 1024,
-                     group = "Snow Depth") %>%
-      addLegend(pal = pal,
-                values = values(selectedData()),
-                title = "Snow Depth (mm)") %>% ## CHANGE
-      addPolylines(data = jmt_access,
-                   color = "green",
-                   label = ~htmlEscape(Name),
-                   weight = 2,
-                   opacity = 0.75,
-                   group = "JMT Access Trails") %>%
-      addPolylines(data = jmt_main,
-                   color = "brown",
-                   label = ~htmlEscape(Name),
-                   weight = 4,
-                   opacity = 0.9,
-                   group = "JMT Main Trail") %>%
-      addMarkers(data = jmt_crossings_simplify,
-                 label = ~htmlEscape(Crossing),
-                 icon = ~crossingIcon,
-                 popup = ~htmlEscape(popup_field),
-                 group = "JMT Main Stream Crossings") %>%
-      addPolygons(data = jmt_watersheds,
-                  color = "blue",
-                  opacity = 0.9,
-                  weight = 1,
-                  fillOpacity = 0.2,
-                  group = "Main Crossing Watersheds") %>%
+      # Fit to the bounds of the selected route
+      fitBounds(
+        as.numeric(route()$bounds$xmin), 
+        as.numeric(route()$bounds$ymin), 
+        as.numeric(route()$bounds$xmax), 
+        as.numeric(route()$bounds$ymax)) %>%
+      
+      ### Make basemap selector
+      
+      # # Load basemap
+      # addProviderTiles(provider = "Esri.WorldTopoMap") %>%
+      # Load basemap
+      addProviderTiles(provider = providers$OpenStreetMap.Mapnik) %>%
+      # Load raster layers
+      addRasterImage(
+        selectedData(),
+        # colors = pal,
+        colors = pal,
+        opacity = 0.5,
+        maxBytes = 10 * 1024 * 1024,
+        group = "Snow Depth",
+      ) %>%
+      
+      addLegend(
+        pal = pal,
+        values = values(selectedData()),
+        title = "Snow Depth (mm)"
+      ) %>% ## CHANGE
+      
+      # Map access trails
+      addPolylines(
+        data = jmt_access,
+        color = "#202020",
+        label = ~htmlEscape(Name),
+        weight = 1,
+        opacity = 0.9,
+        group = "JMT Access Trails"
+      ) %>%
+      
+      # Map main JMT trail
+      addPolylines(
+        data = jmt_main,
+        color = "#202020",
+        label = ~htmlEscape(Name),
+        weight = 3,
+        opacity = 0.9,
+        group = "JMT Main Trail"
+      ) %>%
+      
+      # Map stream Crossings
+      addMarkers(
+        # data = jmt_crossings_simplify,
+        data = route()$crossings,
+        label = ~htmlEscape(Crossing),
+        icon = ~crossingIcon,
+        popup = ~htmlEscape(popup_field),
+        group = "JMT Main Stream Crossings"
+      ) %>%
+      
+      # Map watersheds
+      addPolygons(
+        data = jmt_watersheds,
+        color = "#253d66",
+        opacity = 0.9,
+        weight = 1,
+        fillOpacity = 0.2,
+        group = "Main Crossing Watersheds"
+      ) %>%
       
       # Map selected route
-      addPolylines(data = route()$segments,
-                   color = "blue",
-                   label = ~htmlEscape(Name),
-                   weight = 4,
-                   opacity = 0.9,
-                   group = "Selected Route") %>%
+      addPolylines(
+        data = route()$segments,
+        color = "#126b20",
+        label = ~htmlEscape(Name),
+        weight = 6,
+        opacity = 1,
+        group = "Selected Route"
+      ) %>%
       
       addLayersControl(overlayGroups = c("Snow Depth",
                                          "JMT Access Trails",
