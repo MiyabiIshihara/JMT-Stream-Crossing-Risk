@@ -14,6 +14,7 @@ library(htmltools)
 library(dplyr)
 library(markdown)
 library(lubridate)
+library(sf)
 
 # ------------------------------- # 
 #         import data             # 
