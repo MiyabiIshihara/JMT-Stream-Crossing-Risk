@@ -1,5 +1,3 @@
-## To dos
-## Change layout of the dashboard so that plot is bigger
 
 ## app.R ##
 library(shinydashboard)
@@ -15,22 +13,13 @@ library(tidyverse)
 library(htmltools)
 library(dplyr)
 library(markdown)
-
-# colors <- list(
-#   logo = "",
-#   logoHover = "",
-#   collapseButton = "",
-#   collapseButtonHover = "",
-#   topBar = "",
-#   sideBar = "",
-#   
-#   
-# )
+library(lubridate)
+library(sf)
 
 # ------------------------------- # 
 #         import data             # 
 # ------------------------------- # 
-# Load data ###########
+# Load data
 jmt_crossings_simplify <- readRDS("Data/crossing_points.rds")
 jmt_all <- readRDS("Data/jmt_all_trail.rds")
 jmt_main <- jmt_all %>% filter(Type == 'Main')
@@ -40,13 +29,13 @@ snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
 snow_depth_2017_jmt <- readRDS("Data/snow_depth_2017.rds")
 precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
 route_info <- readRDS("Data/route_info.rds")
+swe_risk_2015_2018 <- readRDS("Data/swe_risk_2015_2018.rds")
 
 # Combine multiple data into a list
 data <- list("snow_depth" = snow_depth_2017_jmt, 
              "precip" = precip_2015_jmt)
 
-
-# Make icon for stream crossings ############      
+# Make icon for stream crossings
 crossingIcon <- makeIcon(
   iconUrl = "www/icon.png",
   iconRetinaUrl = "www/icon2x.png",
@@ -64,66 +53,53 @@ crossingIcon <- makeIcon(
   popupAnchorY = -35
 )
 
-
 # ------------------------------- # 
 #         ui components           # 
 # ------------------------------- # 
 
-date_selector <- function(){
-  sliderInput(
-    inputId = 'time', 
-    label = '', 
-    min = as.Date("2015-01-01"), 
-    max = as.Date("2015-12-31"), 
-    value = as.Date(c("2015-05-20")), 
-    timeFormat = '%Y-%m-%d'
-  )
-}
+# date_selector <- function(){
+#   sliderInput(
+#     inputId = 'time', 
+#     label = '', 
+#     min = as.Date("2015-01-01"), 
+#     max = as.Date("2015-12-31"), 
+#     value = as.Date(c("2015-05-20")), 
+#     timeFormat = '%Y-%m-%d'
+#   )
+# }
 
 trip_selector <- function(){
-  column(
-    12,
-    fluidRow(
-      column(
-        8,
-        style='padding:0px;',
-        selectInput(
-          inputId = "start_th",
-          label = "Starting Trailhead:",
-          choices = sort(unique(route_info$`entry trailhead`)),
-          selected = "Happy Isles Trailhead"
-        )
+  fluidRow(
+    column(
+      8,
+      style='padding:0px;',
+      selectInput(
+        inputId = "start_th",
+        label = "Starting Trailhead:",
+        choices = sort(unique(route_info$`entry trailhead`)),
+        selected = "Happy Isles Trailhead",
       ),
-      column(
-        4,
-        style='padding:0px;',
-        dateInput(
-          inputId="start_date",
-          label="Start Date:",
-          value=today("PMT")
-        )
+      selectInput(
+        inputId="end_th",
+        label="Ending Trailhead:",
+        choices=sort(unique(route_info$`exit trailhead`)),
+        selected="Whitney Portal",
       )
     ),
-
-    fluidRow(
-      column(
-        8,
-        style='padding:0px;',
-        selectInput(
-          inputId="end_th",
-          label="Ending Trailhead:",
-          choices=sort(unique(route_info$`exit trailhead`)),
-          selected="Whitney Portal"
-        )
+    column(
+      4,
+      style='padding:0px;',
+      dateInput(
+        inputId="start_date",
+        label="Start Date:",
+        value=today("PMT"),
+        format = "M dd, yyyy"
       ),
-      column(
-        4,
-        style='padding:0px;',
-        dateInput(
-          inputId="end_date",
-          label="End Date:",
-          value=(today("PMT") + 21)
-        )
+      dateInput(
+        inputId="end_date",
+        label="End Date:",
+        value=(today("PMT") + 21),
+        format = "M dd, yyyy"
       )
     )
   )
@@ -141,15 +117,18 @@ raster_selector <- function(){
   )
 }
 
-
-
-
 # ------------------------------- # 
 #                ui               # 
 # ------------------------------- # 
 #### Header content #### 
 header <- dashboardHeader(
-  title = "John Muir Trail Hazard",
+  title = tags$a(
+    tags$img(
+      src="Logo.svg",
+      # height = "50",
+      width = "50"
+    ), 
+    'JMT Stream Crossing Planner'),
   titleWidth = 400)
 
 
@@ -163,14 +142,7 @@ sidebar <- dashboardSidebar(
     style = "background-color:#4372a7;",
     
     # Header
-    HTML(
-      markdownToHTML(
-        fragment.only=TRUE,
-        text=c(
-          "### Pages"
-        )
-      )
-    ),
+    HTML("<h1>PAGES</h1>"),
     
     # Menu Items
     sidebarMenu(
@@ -203,43 +175,24 @@ sidebar <- dashboardSidebar(
   column(
     12,
     style = "background-color:#4372a7;",
-    HTML(
-      markdownToHTML(
-        fragment.only=TRUE, 
-        text=c(
-          "<br>"
-        )
-      )
-    )
+    HTML("<br>")
   ),
   
   # Spacing without a color
   column(
     12,
-    HTML(
-      markdownToHTML(
-        fragment.only=TRUE, 
-        text=c(
-          "<br>"
-        )
-      )
-    )
+    HTML("<br>")
   ),
   
   # Trip Planner
   column(
     12,
     style = "background-color:#4372a7;",
-    HTML(
-      markdownToHTML(
-        fragment.only=TRUE, 
-        text=c(
-          "### Trip Planner"
-        )
-      )
-    ),
-    date_selector(),
+    HTML("<h1>TRIP PLANNER</h1>"),
+    # date_selector(),
     trip_selector(),
+    uiOutput("trip_day_selector"),
+    # trip_day_selector(),
     raster_selector()
   )
 )
@@ -253,6 +206,12 @@ main_map <- function(){
 #### Body content ####
 body <- dashboardBody(
   
+  # Load CSS
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
+  ),
+  
+  # Setup Tabs
   tabItems(
     # 1st tab content -- Planning Crossings
     tabItem(
@@ -278,59 +237,6 @@ body <- dashboardBody(
       tabName="about_us",
       includeMarkdown("docs/about_us.md")
     )
-  ),
-  
-  # Force the map to fill the whole dashboard body
-  tags$style(type = "text/css", "#main_map {height: calc(100vh - 80px) !important;}"),
-  
-  # Custom UI colors
-  tags$head(
-    tags$style(
-      HTML(
-        '
-        /* logo */
-        .skin-blue .main-header .logo {
-        background-color: #173d69;
-        }
-
-        /* logo when hovered */
-        .skin-blue .main-header .logo:hover {
-        background-color: #1a487d;
-        }
-
-        /* navbar (rest of the header) */
-        .skin-blue .main-header .navbar {
-        background-color: #4372a7;
-        }
-
-        /* main sidebar */
-        .skin-blue .main-sidebar {
-        background-color: #173d69;
-        }
-
-        /* active selected tab in the sidebarmenu */
-        .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
-        background-color: #ffffff;
-        }
-
-        /* other links in the sidebarmenu */
-        .skin-blue .main-sidebar .sidebar .sidebar-menu a{
-        background-color: #598db8;
-        color: #000000;
-        }
-
-        /* other links in the sidebarmenu when hovered */
-        .skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
-        background-color: #66a1d2;
-        }
-
-        /* toggle button when hovered  */
-        .skin-blue .main-header .navbar .sidebar-toggle:hover{
-        background-color: #173d69;
-        }
-        '
-      )
-    )
   )
 )
 
@@ -354,13 +260,32 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   
-  # subset data
+  # Select raster data based on trip date
   selectedData <- reactive({
+    map_date = input$start_date# + input$trip_days - 1
     selectedData <- data[[paste0(input$variable)]]
-    selectedData <- selectedData[[yday(input$time)]]
+    selectedData <- selectedData[[yday(map_date)]]
     selectedData
   })
   
+  # Prepare a custom day selector UI based on the number of trip days
+  output$trip_day_selector <- renderUI({
+    trip_days <- as.numeric(difftime(input$end_date, input$start_date, units = "days")) + 1
+    fluidRow(
+      sliderInput(
+        inputId = 'trip_day', 
+        label = 'Trip Day:',
+        min = 1,
+        max = trip_days,
+        value = 1,
+        width = "100%",
+        step = 1
+      )
+    )
+  })
+  
+  
+  # Compile the route between start and end trailheads 
   compileRoute <- function(start, end) {
     # Get routes with that start and end
     routes <- route_info %>% filter(`entry trailhead`==start & `exit trailhead`==end)
@@ -458,7 +383,7 @@ server <- function(input, output) {
       # Map watersheds
       addPolygons(
         data = jmt_watersheds,
-        color = "#253d66",
+        color = "#4372a7",
         opacity = 0.9,
         weight = 1,
         fillOpacity = 0.2,
@@ -510,7 +435,6 @@ server <- function(input, output) {
                subtitle = "2015-2018 historical data")
 
   })
-  
 }
 
 
