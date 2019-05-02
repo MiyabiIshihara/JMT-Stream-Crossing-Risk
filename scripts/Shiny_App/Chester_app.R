@@ -13,6 +13,7 @@ library(tidyverse)
 library(htmltools)
 library(dplyr)
 library(markdown)
+library(sf)
 
 # ------------------------------- # 
 #         import data             # 
