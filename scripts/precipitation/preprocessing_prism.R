@@ -52,4 +52,3 @@ precip_2015_jmt <- data
 
 
 
-
