@@ -37,25 +37,31 @@ jmt_main <- jmt_all %>% filter(Type == 'Main')
 jmt_access <- jmt_all %>% filter(Type == 'Access')
 jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
 snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
+snow_depth_2017_jmt <- readRDS("Data/snow_depth_2017.rds")
 precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
 route_info <- readRDS("Data/route_info.rds")
 
 # Combine multiple data into a list
-data <- list("snow_depth" = snow_depth_2015_jmt, 
+data <- list("snow_depth" = snow_depth_2017_jmt, 
              "precip" = precip_2015_jmt)
 
 
 # Make icon for stream crossings ############      
 crossingIcon <- makeIcon(
-  iconUrl = "River_Icon/Artboard 1.png",
-  iconRetinaUrl = "River_Icon/Artboard 1@2x.png",
-  # iconHeight = 35,
-  # iconWidth = 20,
-  iconAnchorX = 5,
-  iconAnchorY = 30,
+  iconUrl = "www/icon.png",
+  iconRetinaUrl = "www/icon2x.png",
+  shadowUrl = "www/icon_shadow.png",
+  # shadowRetinaUrl = "wwwn/icon2x_shadow.png",
+  iconHeight = 35,
+  iconWidth = 25,
+  shadowHeight = 35,
+  shadowWidth = 35,
+  iconAnchorX = 12,
+  iconAnchorY = 35,
+  shadowAnchorX = 6,
+  shadowAnchorY = 32,
   popupAnchorX = 6,
   popupAnchorY = -35
-  
 )
 
 
@@ -258,7 +264,8 @@ body <- dashboardBody(
     # 2nd tab content -- What causes risk?
     tabItem(
       tabName="risk_cause",
-      includeMarkdown("docs/risk_cause.md")
+      includeMarkdown("docs/risk_cause.md"),
+      plotOutput("time_series")
     ),
     
     # 3rd tab content -- Current conditions
@@ -384,7 +391,7 @@ server <- function(input, output) {
     pal <- colorNumeric(
       # "viridis",
       palette = colorRamp(c("#FFFFFF", "#014175"), interpolate = "spline"),
-      domain=c(0,3000),
+      domain=c(0,6000),
       na.color="transparent"
     )
     
@@ -475,6 +482,35 @@ server <- function(input, output) {
                                          "Main Crossing Watersheds",
                                          "Selected Route"))
   }) # end of leaflet function
+  
+#Plot to show historical data at selected crossing(s) ####### 
+# Select date range based on inputs
+  date_range <- reactive({
+    date_range <- list("start_day" = yday(input$start_date), 
+                       "end_day" = yday(input$end_date))
+    
+    date_range
+  })
+
+  output$time_series <- renderPlot({
+    swe_risk_2015_2018 %>% 
+      mutate(Year = as.factor(Year)) %>% 
+      filter(watershed %in% route()$crossings$Crossing) %>% # Filter crossings here, currently based on crossings generated in route selection
+      gather("variable", "value", SWE, melt_risk) %>% 
+        ggplot(aes(x = year_day, y = value, lty = Year, col = watershed)) + # Currently symbolizing year with linetype and crossing with color. If we get to a point where only selecting one crossing, should switch year to color and get rid of linetype (lty) argument
+          annotate("rect", xmin = date_range()$start_day, xmax = date_range()$end_day,
+                   ymin = 0, ymax = Inf,
+                   fill = "grey20", alpha = 0.25) +
+          geom_line() + 
+          facet_grid(variable~., scales = "free_y") +
+          theme_classic() +
+          theme(legend.position = "bottom") +
+          labs(x = "Day of the year", 
+               title = "Snow Water Equivalent and Associated Risk",
+               subtitle = "2015-2018 historical data")
+
+  })
+  
 }
 
 
