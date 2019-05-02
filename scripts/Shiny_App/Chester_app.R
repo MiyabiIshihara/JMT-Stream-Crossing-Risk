@@ -13,7 +13,6 @@ library(tidyverse)
 library(htmltools)
 library(dplyr)
 library(markdown)
-library(lubridate)
 
 # ------------------------------- # 
 #         import data             # 
@@ -213,8 +212,7 @@ body <- dashboardBody(
     # 1st tab content -- Planning Crossings
     tabItem(
       tabName = "planning",
-      main_map()#,
-      # map_option_panel()
+      main_map()
     ),
     
     # 2nd tab content -- What causes risk?
