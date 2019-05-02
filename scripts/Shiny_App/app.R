@@ -1,3 +1,5 @@
+## To dos
+## Change layout of the dashboard so that plot is bigger
 
 ## app.R ##
 library(shinydashboard)
