@@ -1,0 +1,154 @@
+/* Force the main map to fill the whole body space */
+#main_map {height: calc(100vh - 80px) !important;}
+
+
+h1 {
+  font-weight: bold;
+  font-size: 20px;
+} 
+
+h3 {
+  font-size: 25px;
+}
+
+h4 { 
+  font-weight: 400; 
+}
+
+.sm_lnk{
+  font-size: 12px;
+}
+
+.main-header .logo {
+  font-weight: 500;
+  font-size: 22px;
+  color: #ffffff;
+}
+
+/* logo area */
+.skin-blue .main-header .logo {
+  background-color: #173d69;
+}
+
+/* logo text */
+.skin-blue .main-header .logo a {
+  color: #ffffff;
+}
+
+/* logo area when hovered */
+.skin-blue .main-header .logo:hover {
+  background-color: #173d69;
+}
+
+/* navbar (rest of the header) */
+.skin-blue .main-header .navbar {
+  background-color: #4372a7;
+}
+
+/* main sidebar */
+.skin-blue .main-sidebar {
+  background-color: #173d69;
+}
+
+/* active selected tab in the sidebarmenu */
+.skin-blue .main-sidebar .sidebar .sidebar-menu .active a {
+  background-color: #ffffff;
+  color: #173d69;
+}
+
+/* other links in the sidebarmenu */
+.skin-blue .main-sidebar .sidebar .sidebar-menu a {
+  background-color: #598db8;
+  color: #ffffff;
+}
+
+/* other links in the sidebarmenu when hovered */
+.skin-blue .main-sidebar .sidebar .sidebar-menu a:hover {
+  background-color: #66a1d2;
+}
+
+/* toggle button when hovered  */
+.skin-blue .main-header .navbar .sidebar-toggle:hover {
+  background-color: #173d69;
+}
+
+/*image containers*/
+/* Three image containers (use 25% for four, and 50% for two, etc) */
+/*
+.column {
+  float: left;
+  width: 33.33%;
+  padding: 2px;
+}
+
+.row::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+*?
+
+
+/*Links
+/*
+p a:link {
+    color: #d53b2d;
+    background-color: transparent;
+    text-decoration: none;
+}
+a:visited {
+    color: #a82317;
+    background-color: transparent;
+    text-decoration: none;
+}
+a:hover {
+    color: #db4c3f;
+    background-color: transparent;
+    text-decoration: underline;
+}
+
+.w3-container button{
+    background-color: #d53b2d;
+    border: #d53b2d;
+}
+
+.w3-container button:hover {
+    background-color: #db4c3f;
+    border: #d53b2d;
+    border-width: 4px;
+}
+
+.w3-container button:focus {
+    background-color: transparent;
+    border: #d53b2d;
+}
+*/
+
+/* special map parts */
+/*
+.leaflet .legend i{
+    border: 1px solid #666;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    margin-top: 4px;
+}
+         
+.leaflet-control-layers-overlays label{
+    font-size: 12px;
+}
+*/
+
+/* shiny labels override for explore your area */
+/*
+#inlineLab .control-label{ 
+  display: table-cell; 
+  text-align: right; 
+  vertical-align: middle; 
+  padding-right: 15px;
+} 
+.form-group { 
+  display: table-row;
+}
+*/
+
