@@ -1,6 +1,9 @@
 /* Force the main map to fill the whole body space */
 #main_map {height: calc(100vh - 80px) !important;}
 
+.irs-grid-pol .small {
+  height: 0px;
+}
 
 h1 {
   font-weight: bold;
