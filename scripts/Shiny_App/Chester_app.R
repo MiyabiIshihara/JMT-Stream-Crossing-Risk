@@ -257,47 +257,7 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   
-  # # Compile the route between start and end trailheads
-  # compileRoute <- function(start, end) {
-  #   # Get shortest routes with that start and end
-  #   route <- route_info %>%
-  #     filter(`entry trailhead`==start & `exit trailhead`==end) %>%
-  #     filter(length == min(length))
-  #   # Select the segments involved with this route
-  #   segment_ids <- route$segment_ids[[1]] + 1
-  #   segments = jmt_all %>% slice(segment_ids)
-  #   # Select the crossings involved with this route
-  #   # Create a copy of the crossings table specific to this route; include row numbers
-  #   route_crossings <- jmt_crossings_simplify %>% mutate(id = row_number())
-  #   
-  #   # Restrict to only the crossings along this route
-  #   
-  #   crossing_ids <- route$crossing_ids[[1]] + 1
-  #   route_crossings <- jmt_crossings_simplify %>% slice(crossing_ids)
-  #   
-  #   # Add crossing distances to the tibble
-  #   route_crossings$route_dists <- route$crossing_positions[[1]]
-  #   
-  #   
-  #   
-  #   
-  #   
-  #   return(
-  #     list(
-  #       'segment_geoms'=segments,
-  #       'crossing_geoms'=crossings,
-  #       'crossing_ids'=crossing_ids,
-  #       'crossing_names'=crossings$Crossing,
-  #       'crossing_dists'=route$crossing_positions[[1]],
-  #       'bounds'=st_bbox(segments),
-  #       'length'=route$length,
-  #       'start'=route$`entry trailhead`,
-  #       'end'=route$`exit trailhead`,
-  #       'id'=route$route_id
-  #     )
-  #   )
-  # }
-  
+  # Compile the route between start and end trailheads
   compileRoute <- function(start, end) {
     # Get shortest routes with that start and end
     route <- route_info %>%
@@ -331,6 +291,14 @@ server <- function(input, output) {
     }
     route_crossings$crossing_date <- route_crossings$crossing_dist %>% lapply(crossing_day)
     
+    # Calculate crossing day of year
+    day_of_year <- function(date) {
+      day <- strftime(date, format = "%j")
+      day <- as.numeric(day)
+      return(day)
+    }
+    route_crossings$crossing_day_of_year <- route_crossings$crossing_date %>% lapply(day_of_year)
+    
     return(
       list(
         'segment_geoms'=segments,
@@ -344,6 +312,7 @@ server <- function(input, output) {
     )
   }
   route <- reactive({compileRoute(input$start_th, input$end_th)})
+  print(route()$crossings$crossing_day_of_year)
   
   # Prepare a custom crossing selector for chosing crossings along a given route
   output$crossing_selector <- renderUI({
@@ -374,35 +343,7 @@ server <- function(input, output) {
     return(crossing)
   }
   crossing <- reactive({select_crossing(input$selected_crossing)})
-  
-  # # Compile attributes of the selected crossing
-  # compileCrossing <- function(selected_crossing, route) {
-  #   # For some reason, leaflet only wants to display a sliced dataframe, not a filtered one
-  #   # So first we get the row number, and then slice by it
-  #   row_number <- which(jmt_crossings_simplify$Crossing == selected_crossing)
-  #   crossing <- jmt_crossings_simplify %>% slice(row_number)
-  #   # Calculate the date associated with the crossing
-  #   # Calculate the route days
-  #   days <- input$end_date - input$start_date + 1
-  #   # Get the crossing's distance along the route
-  #   crossing_idx <- match(c(selected_crossing), route()$crossing_names)
-  #   print(crossing_idx)
-  #   crossing_dist <- route()$crossing_dists[[crossing_idx]]
-  #   # Get the whole route distance
-  #   route_dist <- route()$length
-  #   # Calculate the trip day on which the crossing will take place
-  #   crossing_day <- ceiling(crossing_dist / route_dist * days)
-  #   crossing_date <- input$start_date + crossing_day
-  #   return(
-  #     list(
-  #       'geom'=crossing,
-  #       'crossing_day'=crossing_day,
-  #       'crossing_date'=crossing_date
-  #     )
-  #   )
-  # }
-  # crossing <- reactive({compileCrossing(input$selected_crossing, route)})
-  
+
   # output$test <- renderText({as.Date(crossing()$crossing_date, format = "%m / %d / %Y")})
   
   # Select raster data based on trip date
