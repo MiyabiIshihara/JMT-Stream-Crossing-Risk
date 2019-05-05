@@ -28,28 +28,17 @@ jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
 snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
 precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
 route_info <- readRDS("Data/route_info.rds")
-crossing_positions <- readRDS("Data/crossing_positions.rds")
+swe_risk_2015_2018 <- readRDS("Data/swe_risk_2015_2018.rds")
 
 # Combine multiple data into a list
-data <- list("snow_depth" = snow_depth_2015_jmt, 
-             "precip" = precip_2015_jmt)
-
-
+data <- list(
+  "snow_depth" = snow_depth_2015_jmt, 
+  "precip" = precip_2015_jmt
+)
 
 # ------------------------------- # 
 #         ui components           # 
 # ------------------------------- # 
-
-# date_selector <- function(){
-#   sliderInput(
-#     inputId = 'time', 
-#     label = '', 
-#     min = as.Date("2015-01-01"), 
-#     max = as.Date("2015-12-31"), 
-#     value = as.Date(c("2015-05-20")), 
-#     timeFormat = '%Y-%m-%d'
-#   )
-# }
 
 trip_selector <- function(){
   fluidRow(
@@ -58,13 +47,13 @@ trip_selector <- function(){
       style='padding:0px;',
       selectInput(
         inputId = "start_th",
-        label = "Starting Trailhead:",
+        label = "Starting Trailhead",
         choices = sort(unique(route_info$`entry trailhead`)),
         selected = "Happy Isles Trailhead",
       ),
       selectInput(
         inputId="end_th",
-        label="Ending Trailhead:",
+        label="Ending Trailhead",
         choices=sort(unique(route_info$`exit trailhead`)),
         selected="Whitney Portal",
       )
@@ -74,13 +63,13 @@ trip_selector <- function(){
       style='padding:0px;',
       dateInput(
         inputId="start_date",
-        label="Start Date:",
+        label="Start Date",
         value=today("PMT"),
         format = "M dd, yyyy"
       ),
       dateInput(
         inputId="end_date",
-        label="End Date:",
+        label="End Date",
         value=(today("PMT") + 21),
         format = "M dd, yyyy"
       )
@@ -158,6 +147,9 @@ sidebar <- dashboardSidebar(
     
     # Menu Items
     sidebarMenu(
+      
+      verbatimTextOutput("test"), ###########
+      
       menuItem(
         "Stream Crossing Map", 
         tabName="planning"#,
@@ -201,10 +193,8 @@ sidebar <- dashboardSidebar(
     12,
     style = "background-color:#4372a7;",
     HTML("<h1>TRIP PLANNER</h1>"),
-    # date_selector(),
     trip_selector(),
-    uiOutput("trip_day_selector"),
-    # trip_day_selector(),
+    uiOutput("crossing_selector"),
     raster_selector()
   )
 )
@@ -234,7 +224,8 @@ body <- dashboardBody(
     # 2nd tab content -- What causes risk?
     tabItem(
       tabName="risk_cause",
-      includeMarkdown("docs/risk_cause.md")
+      includeMarkdown("docs/risk_cause.md"),
+      plotOutput("time_series")
     ),
     
     # 3rd tab content -- Current conditions
@@ -266,90 +257,164 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   
-  # Compile the route between start and end trailheads
+  # # Compile the route between start and end trailheads
+  # compileRoute <- function(start, end) {
+  #   # Get shortest routes with that start and end
+  #   route <- route_info %>%
+  #     filter(`entry trailhead`==start & `exit trailhead`==end) %>%
+  #     filter(length == min(length))
+  #   # Select the segments involved with this route
+  #   segment_ids <- route$segment_ids[[1]] + 1
+  #   segments = jmt_all %>% slice(segment_ids)
+  #   # Select the crossings involved with this route
+  #   # Create a copy of the crossings table specific to this route; include row numbers
+  #   route_crossings <- jmt_crossings_simplify %>% mutate(id = row_number())
+  #   
+  #   # Restrict to only the crossings along this route
+  #   
+  #   crossing_ids <- route$crossing_ids[[1]] + 1
+  #   route_crossings <- jmt_crossings_simplify %>% slice(crossing_ids)
+  #   
+  #   # Add crossing distances to the tibble
+  #   route_crossings$route_dists <- route$crossing_positions[[1]]
+  #   
+  #   
+  #   
+  #   
+  #   
+  #   return(
+  #     list(
+  #       'segment_geoms'=segments,
+  #       'crossing_geoms'=crossings,
+  #       'crossing_ids'=crossing_ids,
+  #       'crossing_names'=crossings$Crossing,
+  #       'crossing_dists'=route$crossing_positions[[1]],
+  #       'bounds'=st_bbox(segments),
+  #       'length'=route$length,
+  #       'start'=route$`entry trailhead`,
+  #       'end'=route$`exit trailhead`,
+  #       'id'=route$route_id
+  #     )
+  #   )
+  # }
+  
   compileRoute <- function(start, end) {
     # Get shortest routes with that start and end
     route <- route_info %>%
       filter(`entry trailhead`==start & `exit trailhead`==end) %>%
       filter(length == min(length))
-    print(route$segment_ids)
-    print(route$crossing_ids)
     # Select the segments involved with this route
     segment_ids <- route$segment_ids[[1]] + 1
     segments = jmt_all %>% slice(segment_ids)
     # Select the crossings involved with this route
+    # Create a copy of the crossings table specific to this route; include row numbers
+    route_crossings <- jmt_crossings_simplify %>% mutate(id = row_number())
+
+    # Restrict to crossings along this route
     crossing_ids <- route$crossing_ids[[1]] + 1
-    crossings <- jmt_crossings_simplify %>% slice(crossing_ids)
+    route_crossings <- route_crossings %>% slice(crossing_ids)
+    
+    # Match the dataframe order to the predefined crossing order
+    route_crossings <- route_crossings[match(route$crossing_ids[[1]] + 1, route_crossings$id),]
+    
+    # Add crossing distances
+    route_crossings$crossing_dist <- route$crossing_positions[[1]]
+    
+    # Calculate crossing days
+    crossing_day <- function(dist) {
+      start_day <- input$start_date
+      end_day <- input$end_date
+      days <- end_day - start_day + 1
+      crossing_days <- floor(dist / route$length * days)
+      crossing_date <- start_day + crossing_days
+      return(crossing_date)
+    }
+    route_crossings$crossing_date <- route_crossings$crossing_dist %>% lapply(crossing_day)
     
     return(
       list(
         'segment_geoms'=segments,
-        'crossing_geoms'=crossings,
-        'crossing_ids'=crossing_ids,
-        'crossing_names'=crossings$Crossing,
-        'crossing_dists'=route$crossing_positions[[1]],
+        'crossings'=route_crossings,
         'bounds'=st_bbox(segments),
+        'length'=route$length,
+        'start'=route$`entry trailhead`,
+        'end'=route$`exit trailhead`,
         'id'=route$route_id
       )
     )
   }
   route <- reactive({compileRoute(input$start_th, input$end_th)})
   
-  # reactive({print(route()$crossing_geoms$Crossing)})
-  
-  # Prepare a custom day selector UI based on the number of trip days
-  output$trip_day_selector <- renderUI({
-    fluidRow(
-      sliderTextInput(
-        inputId = 'trip_day',
-        label = "Select Crossing:",
-        choices = route()$crossing_names,
-        selected = route()$crossing_names[c(1)],
-        width = '100%',
-        grid = TRUE
+  # Prepare a custom crossing selector for chosing crossings along a given route
+  output$crossing_selector <- renderUI({
+      # slider_values <- c(
+      #   route()$start,
+      #   as.character(route()$crossing$Crossing),
+      #   route()$end
+      # )
+      slider_values <- route()$crossing$Crossing
+      fluidRow(
+        sliderTextInput(
+          inputId = 'selected_crossing',
+          label = "Scroll between crossings along your trip:",
+          choices = slider_values,
+          selected = slider_values[c(1)],
+          width = '100%',
+          force_edges = TRUE,
+          hide_min_max = TRUE
+        )
       )
-    )
-  })
-    
+    })
+  
+  select_crossing <- function(selected_crossing) {
+    # For some reason, leaflet only wants to display a sliced dataframe, not a filtered one
+      # So first we get the row number, and then slice by it
+      row_number <- which(jmt_crossings_simplify$Crossing == selected_crossing)
+      crossing <- jmt_crossings_simplify %>% slice(row_number)
+    return(crossing)
+  }
+  crossing <- reactive({select_crossing(input$selected_crossing)})
+  
+  # # Compile attributes of the selected crossing
+  # compileCrossing <- function(selected_crossing, route) {
+  #   # For some reason, leaflet only wants to display a sliced dataframe, not a filtered one
+  #   # So first we get the row number, and then slice by it
+  #   row_number <- which(jmt_crossings_simplify$Crossing == selected_crossing)
+  #   crossing <- jmt_crossings_simplify %>% slice(row_number)
+  #   # Calculate the date associated with the crossing
+  #   # Calculate the route days
+  #   days <- input$end_date - input$start_date + 1
+  #   # Get the crossing's distance along the route
+  #   crossing_idx <- match(c(selected_crossing), route()$crossing_names)
+  #   print(crossing_idx)
+  #   crossing_dist <- route()$crossing_dists[[crossing_idx]]
+  #   # Get the whole route distance
+  #   route_dist <- route()$length
+  #   # Calculate the trip day on which the crossing will take place
+  #   crossing_day <- ceiling(crossing_dist / route_dist * days)
+  #   crossing_date <- input$start_date + crossing_day
+  #   return(
+  #     list(
+  #       'geom'=crossing,
+  #       'crossing_day'=crossing_day,
+  #       'crossing_date'=crossing_date
+  #     )
+  #   )
+  # }
+  # crossing <- reactive({compileCrossing(input$selected_crossing, route)})
+  
+  # output$test <- renderText({as.Date(crossing()$crossing_date, format = "%m / %d / %Y")})
+  
   # Select raster data based on trip date
   selectedData <- reactive({
     map_date = input$start_date
+    # map_date = crossing()$crossing_date[[1]]
     selectedData <- data[[paste0(input$variable)]]
     selectedData <- selectedData[[yday(map_date)]]
     selectedData
   })
-    
-  # trip_days <- as.numeric(difftime(input$end_date, input$start_date, units = "days")) + 1
-  # fluidRow(
-  #   sliderInput(
-  #     inputId = 'trip_day',
-  #     label = 'Trip Day:',
-  #     min = 1,
-  #     max = trip_days,
-  #     value = 1,
-  #     width = "100%",
-  #     step = 1
-  #   )
-  # )
-  # })
   
-  # # Compile the crossings associated with that route
-  # compileCrossings <- function(route_id) {
-  #   crossings <- crossing_positions %>%
-  #     filter(route_id==route_id) %>%
-  #     arrange(crossing_position)
-  #   crossing_geoms <- jmt_crossings_simplify %>% 
-  #     slice(crossings$crossing_id + 1)
-  #   return(
-  #     list(
-  #       'ids' = crossings$crossing_id,
-  #       'lin_refs' = crossings$crossing_position,
-  #       'geoms' = crossing_geoms
-  #     )
-  #   )
-  # }
-  # crossings <- reactive(compileCrossings(route()$id))
-  
+  # Prepare the main map  
   output$main_map <- renderLeaflet({
     pal <- colorNumeric(
       # "viridis",
@@ -410,11 +475,20 @@ server <- function(input, output) {
       
       # Map stream Crossings
       addMarkers(
-        data = route()$crossing_geoms,
+        data = route()$crossings,
         label = ~htmlEscape(Crossing),
         icon = ~blueIcon,
         popup = ~htmlEscape(popup_field),
         group = "JMT Main Stream Crossings"
+      ) %>%
+      
+      # Map selected Crossings
+      addMarkers(
+        data = crossing(),
+        label = ~htmlEscape(Crossing),
+        icon = ~redIcon,
+        popup = ~htmlEscape(popup_field),
+        group = "Selected Crossings"
       ) %>%
       
       # Map watersheds
@@ -444,8 +518,36 @@ server <- function(input, output) {
                                          "Main Crossing Watersheds",
                                          "Selected Route"))
   }) # end of leaflet function
-}
 
+#Plot to show historical data at selected crossing(s) ####### 
+# Select date range based on inputs
+  
+# date_range <- reactive({
+#   date_range <- list("start_day" = yday(input$start_date), 
+#                      "end_day" = yday(input$end_date))
+#   
+#   date_range
+# })
+# 
+#   output$time_series <- renderPlot({
+#     swe_risk_2015_2018 %>% 
+#       mutate(Year = as.factor(Year)) %>% 
+#       filter(watershed %in% route()$crossing_names) %>% # Filter crossings here, currently based on crossings generated in route selection
+#       gather("variable", "value", SWE, melt_risk) %>% 
+#       ggplot(aes(x = year_day, y = value, lty = Year, col = watershed)) + # Currently symbolizing year with linetype and crossing with color. If we get to a point where only selecting one crossing, should switch year to color and get rid of linetype (lty) argument
+#       annotate("rect", xmin = date_range()$start_day, xmax = date_range()$end_day,
+#                ymin = 0, ymax = Inf,
+#                fill = "grey20", alpha = 0.25) +
+#       geom_line() + 
+#       facet_grid(variable~., scales = "free_y") +
+#       theme_classic() +
+#       theme(legend.position = "bottom") +
+#       labs(x = "Day of the year", 
+#            title = "Snow Water Equivalent and Associated Risk",
+#            subtitle = "2015-2018 historical data")
+#     
+#   })
+}
 
 shinyApp(ui, server)
 
