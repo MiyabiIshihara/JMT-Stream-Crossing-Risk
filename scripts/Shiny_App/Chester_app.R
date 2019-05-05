@@ -21,13 +21,14 @@ library(shinyWidgets)
 # ------------------------------- # 
 # Load data
 jmt_crossings_simplify <- readRDS("Data/crossing_points.rds")
-jmt_all <- readRDS("Data/jmt_all_trail.rds")
+jmt_all <- readRDS("Data/jmt_all_trails.rds")
 jmt_main <- jmt_all %>% filter(Type == 'Main')
 jmt_access <- jmt_all %>% filter(Type == 'Access')
 jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
 snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
 precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
 route_info <- readRDS("Data/route_info.rds")
+crossing_positions <- readRDS("Data/crossing_positions.rds")
 
 # Combine multiple data into a list
 data <- list("snow_depth" = snow_depth_2015_jmt, 
@@ -344,32 +345,88 @@ server <- function(input, output) {
   })
   
   
-  # Compile the route between start and end trailheads 
+  # # Compile the route between start and end trailheads
+  # compileRoute <- function(start, end) {
+  #   # Get shortest routes with that start and end
+  #   route <- route_info %>%
+  #     filter(`entry trailhead`==start & `exit trailhead`==end) %>%
+  #     filter(length == min(length))
+  #   # Get the segment indices associated with this route
+  #   segment_ids <- route$edge_ids
+  #   segment_ids <- substr(segment_ids, 2, nchar(segment_ids)-1)
+  #   segment_ids <- as.integer(strsplit(segment_ids, ", ")[[1]])
+  #   # Add one to account for R indices starting at 1 instead of 0
+  #   segment_ids <- segment_ids + 1
+  #   # Select the segments involves with this route
+  #   segments = jmt_all  %>% slice(segment_ids)
+  #   
+  #   print(segment_ids)
+  #   
+  #   # Get the crossing indices associated with this route
+  #   crossing_ids <- route$streams_crossed
+  #   crossing_ids <- substr(crossing_ids, 2, nchar(crossing_ids)-1)
+  #   crossing_ids <- as.integer(strsplit(crossing_ids, ", ")[[1]])
+  #   # Add one to account for R indices starting at 1 instead of 0
+  #   crossing_ids <- crossing_ids + 1
+  #   # Select the crossings involved with this route
+  #   crossings <- jmt_crossings_simplify %>% slice(crossing_ids)
+  #   # Return just the segments associated with the route
+  #   
+  #   print(crossing_ids)
+  #   
+  #   return(
+  #     list(
+  #       'segments'=segments,
+  #       'crossings'=crossings,
+  #       'bounds'=st_bbox(segments),
+  #       'id'=route$route_id
+  #     )
+  #   )
+  # }
+  
+  # Compile the route between start and end trailheads
   compileRoute <- function(start, end) {
-    # Get routes with that start and end
-    routes <- route_info %>% filter(`entry trailhead`==start & `exit trailhead`==end)
-    # Identify the shortest of these routes
-    route <- routes %>% filter(length == min(length))
-    # Get the segment indices associated with this route
-    segment_ids <- route$edge_ids
-    segment_ids <- substr(segment_ids, 2, nchar(segment_ids)-1)
-    segment_ids <- as.integer(strsplit(segment_ids, ", ")[[1]])
-    # Add one to account for R indices starting at 1 instead of 0
-    segment_ids <- segment_ids + 1
-    # Select the segments involves with this route
-    segments = jmt_all  %>% slice(segment_ids)
-    # Get the crossing indices associated with this route
-    crossing_ids <- route$streams_crossed
-    crossing_ids <- substr(crossing_ids, 2, nchar(crossing_ids)-1)
-    crossing_ids <- as.integer(strsplit(crossing_ids, ", ")[[1]])
-    # Add one to account for R indices starting at 1 instead of 0
-    crossing_ids <- crossing_ids + 1
+    # Get shortest routes with that start and end
+    route <- route_info %>%
+      filter(`entry trailhead`==start & `exit trailhead`==end) %>%
+      filter(length == min(length))
+    print(route$segment_ids)
+    print(route$crossing_ids)
+    # Select the segments involved with this route
+    segment_ids <- route$segment_ids[[1]] + 1
+    segments = jmt_all %>% slice(segment_ids)
     # Select the crossings involved with this route
+    crossing_ids <- route$crossing_ids[[1]] + 1
     crossings <- jmt_crossings_simplify %>% slice(crossing_ids)
     # Return just the segments associated with the route
-    return(list('segments'=segments, 'crossings'=crossings, 'bounds'=st_bbox(segments)))
+    return(
+      list(
+        'segments'=segments,
+        'crossings'=crossings,
+        'bounds'=st_bbox(segments),
+        'id'=route$route_id
+      )
+    )
   }
+  
   route <- reactive({compileRoute(input$start_th, input$end_th)})
+  
+  # Compile the crossings associated with that route
+  compileCrossings <- function(route_id) {
+    crossings <- crossing_positions %>%
+      filter(route_id==route_id) %>%
+      arrange(crossing_position)
+    crossing_geoms <- jmt_crossings_simplify %>% 
+      slice(crossings$crossing_id + 1)
+    return(
+      list(
+        'ids' = crossings$crossing_id,
+        'lin_refs' = crossings$crossing_position,
+        'geoms' = crossing_geoms
+      )
+    )
+  }
+  crossings <- reactive(compileCrossings(route()$id))
   
   output$main_map <- renderLeaflet({
     pal <- colorNumeric(
@@ -432,7 +489,9 @@ server <- function(input, output) {
       # Map stream Crossings
       addMarkers(
         # data = jmt_crossings_simplify,
-        data = route()$crossings,
+        data = route()$crossings, #################
+        # data = crossings()$ids,
+        # data = crossings()$geoms,
         label = ~htmlEscape(Crossing),
         icon = ~crossingIcon,
         popup = ~htmlEscape(popup_field),
