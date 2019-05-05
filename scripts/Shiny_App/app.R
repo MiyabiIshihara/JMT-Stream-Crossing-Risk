@@ -21,7 +21,7 @@ library(sf)
 # ------------------------------- # 
 # Load data
 jmt_crossings_simplify <- readRDS("Data/crossing_points.rds")
-jmt_all <- readRDS("Data/jmt_all_trail.rds")
+jmt_all <- readRDS("Data/jmt_all_trails.rds")
 jmt_main <- jmt_all %>% filter(Type == 'Main')
 jmt_access <- jmt_all %>% filter(Type == 'Access')
 jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
