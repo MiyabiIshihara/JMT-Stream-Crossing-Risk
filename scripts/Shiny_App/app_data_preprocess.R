@@ -53,7 +53,8 @@ source("scripts/googledrive_read_write_functions.R")
 
   jmt_swe15_18 <- rbind(jmt_swe_2015, jmt_swe_2016, jmt_swe_2017, jmt_swe_2018) %>% 
     gather("watershed", "SWE", -Date) %>% 
-    mutate(Year = year(Date)) %>% 
+    mutate(Year = year(Date),
+           year_day = yday(Date)) %>% 
     group_by(watershed) %>% 
     mutate(last_swe = dplyr::lag(SWE, order_by = watershed),
            SWE_melt = -(SWE - last_swe),
@@ -62,6 +63,14 @@ source("scripts/googledrive_read_write_functions.R")
     left_join(jmt_crossings_df %>% 
                 select(JMT_Cross, crossing_id), 
               by = c("watershed" = "JMT_Cross"))
+  
+    mid_risk <- quantile(jmt_swe15_18$melt_risk, 0.90, na.rm = T)
+    hi_risk <- quantile(jmt_swe15_18$melt_risk, 0.99, na.rm = T)
+    
+    jmt_swe15_18 <- jmt_swe15_18 %>% 
+      mutate(risk_score = case_when(melt_risk <= mid_risk ~ 1,
+                                    melt_risk >= mid_risk & melt_risk <= hi_risk~ 2,
+                                    melt_risk >= hi_risk ~ 3))
   
     saveRDS(jmt_swe15_18, "scripts/Shiny_App/Data/swe_risk_2015_2018.rds")
 
