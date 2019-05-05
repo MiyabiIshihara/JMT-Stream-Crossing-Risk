@@ -26,13 +26,21 @@ jmt_main <- jmt_all %>% filter(Type == 'Main')
 jmt_access <- jmt_all %>% filter(Type == 'Access')
 jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
 snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
-snow_depth_2017_jmt <- readRDS("Data/snow_depth_2017.rds")
 precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
 route_info <- readRDS("Data/route_info.rds")
-swe_risk_2015_2018 <- readRDS("Data/swe_risk_2015_2018.rds")
+
+
+# # create a vector of dates 
+# dates <- seq(as.Date("2015-01-01"), as.Date("2015-12-31"), by = 1)
+# start_date <- "2015-05-01"
+# ind <- which(dates == start_date)
+# snow_depth_2015_jmt[[ind]]
+# map_date = as.Date(start_date) + 32 - 1;  map_date
+# map_date = as.Date(input$start_date) + input$trip_days - 1
+
 
 # Combine multiple data into a list
-data <- list("snow_depth" = snow_depth_2017_jmt, 
+data <- list("snow_depth" = snow_depth_2015_jmt, 
              "precip" = precip_2015_jmt)
 
 # Make icon for stream crossings
@@ -223,8 +231,7 @@ body <- dashboardBody(
     # 2nd tab content -- What causes risk?
     tabItem(
       tabName="risk_cause",
-      includeMarkdown("docs/risk_cause.md"),
-      plotOutput("time_series")
+      includeMarkdown("docs/risk_cause.md")
     ),
     
     # 3rd tab content -- Current conditions
@@ -259,15 +266,7 @@ ui <- dashboardPage(
 # ------------------------------- # 
 
 server <- function(input, output) {
-  
-  # Select raster data based on trip date
-  selectedData <- reactive({
-    map_date = input$start_date# + input$trip_days - 1
-    selectedData <- data[[paste0(input$variable)]]
-    selectedData <- selectedData[[yday(map_date)]]
-    selectedData
-  })
-  
+
   # Prepare a custom day selector UI based on the number of trip days
   output$trip_day_selector <- renderUI({
     trip_days <- as.numeric(difftime(input$end_date, input$start_date, units = "days")) + 1
@@ -282,6 +281,15 @@ server <- function(input, output) {
         step = 1
       )
     )
+  })
+  
+  
+  # Select raster data based on trip date
+  selectedData <- reactive({
+    map_date = as.Date(input$start_date) + input$trip_day - 1
+    selectedData <- data[[paste0(input$variable)]]
+    selectedData <- selectedData[[yday(map_date)]]
+    selectedData
   })
   
   
@@ -316,7 +324,7 @@ server <- function(input, output) {
     pal <- colorNumeric(
       # "viridis",
       palette = colorRamp(c("#FFFFFF", "#014175"), interpolate = "spline"),
-      domain=c(0,6000),
+      domain=c(0,3000),
       na.color="transparent"
     )
     
@@ -407,34 +415,6 @@ server <- function(input, output) {
                                          "Main Crossing Watersheds",
                                          "Selected Route"))
   }) # end of leaflet function
-  
-#Plot to show historical data at selected crossing(s) ####### 
-# Select date range based on inputs
-  date_range <- reactive({
-    date_range <- list("start_day" = yday(input$start_date), 
-                       "end_day" = yday(input$end_date))
-    
-    date_range
-  })
-
-  output$time_series <- renderPlot({
-    swe_risk_2015_2018 %>% 
-      mutate(Year = as.factor(Year)) %>% 
-      filter(watershed %in% route()$crossings$Crossing) %>% # Filter crossings here, currently based on crossings generated in route selection
-      gather("variable", "value", SWE, melt_risk) %>% 
-        ggplot(aes(x = year_day, y = value, lty = Year, col = watershed)) + # Currently symbolizing year with linetype and crossing with color. If we get to a point where only selecting one crossing, should switch year to color and get rid of linetype (lty) argument
-          annotate("rect", xmin = date_range()$start_day, xmax = date_range()$end_day,
-                   ymin = 0, ymax = Inf,
-                   fill = "grey20", alpha = 0.25) +
-          geom_line() + 
-          facet_grid(variable~., scales = "free_y") +
-          theme_classic() +
-          theme(legend.position = "bottom") +
-          labs(x = "Day of the year", 
-               title = "Snow Water Equivalent and Associated Risk",
-               subtitle = "2015-2018 historical data")
-
-  })
 }
 
 

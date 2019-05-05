@@ -1,3 +1,11 @@
+/* Customize fonts */
+body, label, input, button, select { 
+    font-family: 'Gustan', Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 200;
+    /* color: #FFFFFF; */
+} 
+
 /* Force the main map to fill the whole body space */
 #main_map {height: calc(100vh - 80px) !important;}
 
