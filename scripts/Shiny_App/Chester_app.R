@@ -15,23 +15,30 @@ library(dplyr)
 library(markdown)
 library(sf)
 library(shinyWidgets)
+library(tidytidbits)
+
+
+# source("inputs.R")
+source("functions.R")
 
 # ------------------------------- # 
 #         import data             # 
 # ------------------------------- # 
-# Load data
-jmt_crossings_simplify <- readRDS("Data/crossing_points.rds")
+
+jmt_crossings <- readRDS("Data/crossing_points.rds")
 jmt_all <- readRDS("Data/jmt_all_trails.rds")
 jmt_main <- jmt_all %>% filter(Type == 'Main')
 jmt_access <- jmt_all %>% filter(Type == 'Access')
 jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
 snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
+snow_depth_2017_jmt <- readRDS("Data/snow_depth_2017.rds")
 precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
 route_info <- readRDS("Data/route_info.rds")
 swe_risk_2015_2018 <- readRDS("Data/swe_risk_2015_2018.rds")
 
+
 # Combine multiple data into a list
-data <- list(
+raster_data <- list(
   "snow_depth" = snow_depth_2015_jmt, 
   "precip" = precip_2015_jmt
 )
@@ -40,83 +47,6 @@ data <- list(
 #         ui components           # 
 # ------------------------------- # 
 
-trip_selector <- function(){
-  fluidRow(
-    column(
-      8,
-      style='padding:0px;',
-      selectInput(
-        inputId = "start_th",
-        label = "Starting Trailhead",
-        choices = sort(unique(route_info$`entry trailhead`)),
-        selected = "Happy Isles Trailhead",
-      ),
-      selectInput(
-        inputId="end_th",
-        label="Ending Trailhead",
-        choices=sort(unique(route_info$`exit trailhead`)),
-        selected="Whitney Portal",
-      )
-    ),
-    column(
-      4,
-      style='padding:0px;',
-      dateInput(
-        inputId="start_date",
-        label="Start Date",
-        value=today("PMT"),
-        format = "M dd, yyyy"
-      ),
-      dateInput(
-        inputId="end_date",
-        label="End Date",
-        value=(today("PMT") + 21),
-        format = "M dd, yyyy"
-      )
-    )
-  )
-}
-
-raster_selector <- function(){
-  radioButtons(
-    inputId = "variable", 
-    label = "",
-    choices = c(
-      "Snow Depth" = "snow_depth", 
-      "Precipitation" = "precip"
-    ), 
-    selected = "snow_depth"
-  )
-}
-
-# Define Icons
-icon <- function(url, retinaUrl) {
-  return(
-    makeIcon(
-      iconUrl = url,
-      # iconRetinaUrl = retinaUrl,
-      shadowUrl = "www/icon_shadow.png",
-      iconHeight = 35,
-      iconWidth = 25,
-      shadowHeight = 35,
-      shadowWidth = 35,
-      iconAnchorX = 12,
-      iconAnchorY = 35,
-      shadowAnchorX = 6,
-      shadowAnchorY = 32,
-      popupAnchorX = 1,
-      popupAnchorY = -35
-    )
-  )
-}
-blueIcon <- icon("www/icon.png", "www/icon2x.png")
-redIcon <- icon("www/icon_red.png", "www/icon2x_red.png")
-yellowIcon <- icon("www/icon_yellow.png", "www/icon2x_yellow.png")
-greenIcon <- icon("www/icon_green.png", "www/icon2x_green.png")
-blueIconSemi <- icon("www/icon_semi.png", "www/icon2x_semi.png")
-redIconSemi <- icon("www/icon_red_semi.png", "www/icon2x_red_semi.png")
-yellowIconSemi <- icon("www/icon_yellow_semi.png", "www/icon2x_yellow_semi.png")
-greenIconSemi <- icon("www/icon_green_semi.png", "www/icon2x_green_semi.png")
 
 # ------------------------------- # 
 #                ui               # 
@@ -130,12 +60,12 @@ header <- dashboardHeader(
       width = "50"
     ), 
     'JMT Stream Crossing Planner'),
-  titleWidth = 400)
+  titleWidth = 420)
 
 
 #### Sidebar content #### 
 sidebar <- dashboardSidebar(
-  width = 400,
+  width = 420,
 
   # Navigation
   column(
@@ -156,18 +86,18 @@ sidebar <- dashboardSidebar(
         # icon=icon("dashboard")
       ),
       menuItem(
-        "Historical Stream Flow", 
+        "Stream Flow & Hazard Timeseries", 
         tabName="risk_cause"#,
         # icon=icon("th")
       ),
-      menuItem(
-        "Forecasted Stream Flow", 
-        tabName="current_conditions"
-      ),
-      menuItem(
-        "Stream Crossing Information", 
-        tabName="about_us"
-      ),
+      # menuItem(
+      #   "Forecasted Stream Flow", 
+      #   tabName="current_conditions"
+      # ),
+      # menuItem(
+      #   "Stream Crossing Information", 
+      #   tabName="about_us"
+      # ),
       menuItem(
         "About This Project", 
         tabName="about_us"
@@ -193,9 +123,9 @@ sidebar <- dashboardSidebar(
     12,
     style = "background-color:#4372a7;",
     HTML("<h1>TRIP PLANNER</h1>"),
-    trip_selector(),
+    tripSelector(),
     uiOutput("crossing_selector"),
-    raster_selector()
+    rasterSelector()
   )
 )
 
@@ -224,7 +154,9 @@ body <- dashboardBody(
     # 2nd tab content -- What causes risk?
     tabItem(
       tabName="risk_cause",
-      includeMarkdown("docs/risk_cause.md"),
+      HTML("<h2>SNOW WATER EQUIVALENT & ASSOCIATED RISK</h2>"),
+      HTML("<h3>2015-2018 Historical Data</h3>"),
+      # includeMarkdown("docs/risk_cause.md"),
       plotOutput("time_series")
     ),
     
@@ -257,104 +189,26 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   
-  # Compile the route between start and end trailheads
-  compileRoute <- function(start, end) {
-    # Get shortest routes with that start and end
-    route <- route_info %>%
-      filter(`entry trailhead`==start & `exit trailhead`==end) %>%
-      filter(length == min(length))
-    # Select the segments involved with this route
-    segment_ids <- route$segment_ids[[1]] + 1
-    segments = jmt_all %>% slice(segment_ids)
-    # Select the crossings involved with this route
-    # Create a copy of the crossings table specific to this route; include row numbers
-    route_crossings <- jmt_crossings_simplify %>% mutate(id = row_number())
+  # Compile route info based on the entered start and end th/date
+  route <- reactive({compileRoute(input$start_th, input$end_th, input$start_date, input$end_date, jmt_crossings, jmt_all, swe_risk_2015_2018)})
+  
+  # Built a dynamic slider to select the crossing of interest based on the input route
+  output$crossing_selector <- crossingSelector(route)
+  
+  # Get the data for that selected crossing
+  selected_crossing <- reactive({selectCrossingFromTable(input$selected_crossing, route()$crossings)})
 
-    # Restrict to crossings along this route
-    crossing_ids <- route$crossing_ids[[1]] + 1
-    route_crossings <- route_crossings %>% slice(crossing_ids)
-    
-    # Match the dataframe order to the predefined crossing order
-    route_crossings <- route_crossings[match(route$crossing_ids[[1]] + 1, route_crossings$id),]
-    
-    # Add crossing distances
-    route_crossings$crossing_dist <- route$crossing_positions[[1]]
-    
-    # Calculate crossing days
-    crossing_day <- function(dist) {
-      start_day <- input$start_date
-      end_day <- input$end_date
-      days <- end_day - start_day + 1
-      crossing_days <- floor(dist / route$length * days)
-      crossing_date <- start_day + crossing_days
-      return(crossing_date)
-    }
-    route_crossings$crossing_date <- route_crossings$crossing_dist %>% lapply(crossing_day)
-    
-    # Calculate crossing day of year
-    day_of_year <- function(date) {
-      day <- strftime(date, format = "%j")
-      day <- as.numeric(day)
-      return(day)
-    }
-    route_crossings$crossing_day_of_year <- route_crossings$crossing_date %>% lapply(day_of_year)
-    
-    return(
-      list(
-        'segment_geoms'=segments,
-        'crossings'=route_crossings,
-        'bounds'=st_bbox(segments),
-        'length'=route$length,
-        'start'=route$`entry trailhead`,
-        'end'=route$`exit trailhead`,
-        'id'=route$route_id
-      )
-    )
-  }
-  route <- reactive({compileRoute(input$start_th, input$end_th)})
-  print(route()$crossings$crossing_day_of_year)
+  # Get raster data based on raster type selection and trip date
+  selectedRaster <- reactive({selectRaster(selected_crossing(), raster_data, input$raster_selection)})
   
-  # Prepare a custom crossing selector for chosing crossings along a given route
-  output$crossing_selector <- renderUI({
-      # slider_values <- c(
-      #   route()$start,
-      #   as.character(route()$crossing$Crossing),
-      #   route()$end
-      # )
-      slider_values <- route()$crossing$Crossing
-      fluidRow(
-        sliderTextInput(
-          inputId = 'selected_crossing',
-          label = "Scroll between crossings along your trip:",
-          choices = slider_values,
-          selected = slider_values[c(1)],
-          width = '100%',
-          force_edges = TRUE,
-          hide_min_max = TRUE
-        )
-      )
-    })
-  
-  select_crossing <- function(selected_crossing) {
-    # For some reason, leaflet only wants to display a sliced dataframe, not a filtered one
-      # So first we get the row number, and then slice by it
-      row_number <- which(jmt_crossings_simplify$Crossing == selected_crossing)
-      crossing <- jmt_crossings_simplify %>% slice(row_number)
-    return(crossing)
-  }
-  crossing <- reactive({select_crossing(input$selected_crossing)})
+  # Filter crossings based their risk ratings
+  highRiskCrossings <- reactive({filterCrossingRisk(route()$crossings, 3)})
+  mediumRiskCrossings <- reactive({filterCrossingRisk(route()$crossings, 2)})
+  lowRiskCrossings <- reactive({filterCrossingRisk(route()$crossings, 1)})
+  highRiskCrossingsSelected <- reactive({filterCrossingRisk(selected_crossing(), 3)})
+  mediumRiskCrossingsSelected <- reactive({filterCrossingRisk(selected_crossing(), 2)})
+  lowRiskCrossingsSelected <- reactive({filterCrossingRisk(selected_crossing(), 1)})
 
-  # output$test <- renderText({as.Date(crossing()$crossing_date, format = "%m / %d / %Y")})
-  
-  # Select raster data based on trip date
-  selectedData <- reactive({
-    map_date = input$start_date
-    # map_date = crossing()$crossing_date[[1]]
-    selectedData <- data[[paste0(input$variable)]]
-    selectedData <- selectedData[[yday(map_date)]]
-    selectedData
-  })
-  
   # Prepare the main map  
   output$main_map <- renderLeaflet({
     pal <- colorNumeric(
@@ -380,17 +234,17 @@ server <- function(input, output) {
       addProviderTiles(provider = providers$OpenStreetMap.Mapnik) %>%
       # Load raster layers
       addRasterImage(
-        selectedData(),
+        selectedRaster(),
         # colors = pal,
         colors = pal,
         opacity = 0.5,
         maxBytes = 10 * 1024 * 1024,
-        group = "Snow Depth",
+        group = "Snow Depth"
       ) %>%
       
       addLegend(
         pal = pal,
-        values = values(selectedData()),
+        values = values(selectedRaster()),
         title = "Snow Depth (mm)"
       ) %>% ## CHANGE
       
@@ -414,22 +268,76 @@ server <- function(input, output) {
         group = "JMT Main Trail"
       ) %>%
       
-      # Map stream Crossings
-      addMarkers(
-        data = route()$crossings,
-        label = ~htmlEscape(Crossing),
-        icon = ~blueIcon,
-        popup = ~htmlEscape(popup_field),
-        group = "JMT Main Stream Crossings"
+      # Map high risk crossings, not selected
+      execute_if(
+        (nrow(highRiskCrossings()) > 0),
+        addMarkers(
+          data = highRiskCrossings(),
+          label = ~htmlEscape(Crossing),
+          icon = ~redIconSmall,
+          popup = ~htmlEscape(popup_field),
+          group = "JMT Main Stream Crossings"
+        )
       ) %>%
       
-      # Map selected Crossings
-      addMarkers(
-        data = crossing(),
-        label = ~htmlEscape(Crossing),
-        icon = ~redIcon,
-        popup = ~htmlEscape(popup_field),
-        group = "Selected Crossings"
+      # Map medium risk crossings, not selected
+      execute_if(
+        (nrow(mediumRiskCrossings()) > 0),
+        addMarkers(
+          data = mediumRiskCrossings(),
+          label = ~htmlEscape(Crossing),
+          icon = ~yellowIconSmall,
+          popup = ~htmlEscape(popup_field),
+          group = "JMT Main Stream Crossings"
+        )
+      ) %>%
+      
+      # Map low risk crossings, not selected
+      execute_if(
+        (nrow(lowRiskCrossings()) > 0),
+        addMarkers(
+          data = lowRiskCrossings(),
+          label = ~htmlEscape(Crossing),
+          icon = ~greenIconSmall,
+          popup = ~htmlEscape(popup_field),
+          group = "JMT Main Stream Crossings"
+        )
+      ) %>%
+      
+      # Map high risk crossings, selected
+      execute_if(
+        (nrow(highRiskCrossingsSelected()) > 0),
+        addMarkers(
+          data = highRiskCrossingsSelected(),
+          label = ~htmlEscape(Crossing),
+          icon = ~redIcon,
+          popup = ~htmlEscape(popup_field),
+          group = "Selected Crossings"
+        )
+      ) %>%
+      
+      # Map medium risk crossings, selected
+      execute_if(
+        (nrow(mediumRiskCrossingsSelected()) > 0),
+        addMarkers(
+          data = mediumRiskCrossingsSelected(),
+          label = ~htmlEscape(Crossing),
+          icon = ~yellowIcon,
+          popup = ~htmlEscape(popup_field),
+          group = "Selected Crossings"
+        )
+      ) %>%
+      
+      # Map low risk crossings, selected
+      execute_if(
+        (nrow(lowRiskCrossingsSelected()) > 0),
+        addMarkers(
+          data = lowRiskCrossingsSelected(),
+          label = ~htmlEscape(Crossing),
+          icon = ~greenIcon,
+          popup = ~htmlEscape(popup_field),
+          group = "Selected Crossings"
+        )
       ) %>%
       
       # Map watersheds
@@ -442,52 +350,90 @@ server <- function(input, output) {
         group = "Main Crossing Watersheds"
       ) %>%
       
-      # Map selected route
-      addPolylines(
-        data = route()$segment_geoms,
-        color = "#126b20",
-        label = ~htmlEscape(Name),
-        weight = 6,
-        opacity = 1,
-        group = "Selected Route"
+      execute_if(
+        (nrow(route()$segment_geoms) > 0),
+        addPolylines(
+          data = route()$segment_geoms,
+          color = "#126b20",
+          label = ~htmlEscape(Name),
+          weight = 6,
+          opacity = 1,
+          group = "Selected Route"
+        )
       ) %>%
-      
-      addLayersControl(overlayGroups = c("Snow Depth",
-                                         "JMT Access Trails",
-                                         "JMT Main Trail",
-                                         "JMT Main Stream Crossings",
-                                         "Main Crossing Watersheds",
-                                         "Selected Route"))
+
+      addLayersControl(
+        overlayGroups = c(
+          "Snow Depth",
+          "JMT Access Trails",
+          "JMT Main Trail",
+          "JMT Main Stream Crossings",
+          "Main Crossing Watersheds",
+          "Selected Route"
+        )
+      )
+  
   }) # end of leaflet function
 
 #Plot to show historical data at selected crossing(s) ####### 
 # Select date range based on inputs
   
-# date_range <- reactive({
-#   date_range <- list("start_day" = yday(input$start_date), 
-#                      "end_day" = yday(input$end_date))
-#   
-#   date_range
-# })
-# 
-#   output$time_series <- renderPlot({
-#     swe_risk_2015_2018 %>% 
-#       mutate(Year = as.factor(Year)) %>% 
-#       filter(watershed %in% route()$crossing_names) %>% # Filter crossings here, currently based on crossings generated in route selection
-#       gather("variable", "value", SWE, melt_risk) %>% 
-#       ggplot(aes(x = year_day, y = value, lty = Year, col = watershed)) + # Currently symbolizing year with linetype and crossing with color. If we get to a point where only selecting one crossing, should switch year to color and get rid of linetype (lty) argument
-#       annotate("rect", xmin = date_range()$start_day, xmax = date_range()$end_day,
-#                ymin = 0, ymax = Inf,
-#                fill = "grey20", alpha = 0.25) +
-#       geom_line() + 
-#       facet_grid(variable~., scales = "free_y") +
-#       theme_classic() +
-#       theme(legend.position = "bottom") +
-#       labs(x = "Day of the year", 
-#            title = "Snow Water Equivalent and Associated Risk",
-#            subtitle = "2015-2018 historical data")
-#     
-#   })
+# Retrieve date range based on date selectors
+  prepareGraphDateRange <- function(start, end) {
+    date_range <- list(
+      'start' = yday(start),
+      'end' = yday(end)
+    )
+    return(date_range)
+  }
+  
+  graph_date_range <- reactive({prepareGraphDateRange(input$start_date, input$end_date)})
+
+  plotTimeSeries <- function() {
+    return(
+      renderPlot({
+        swe_risk_2015_2018 %>%
+          mutate(Year = as.factor(Year)) %>%
+            filter(watershed %in% selected_crossing()$Crossing) %>% 
+              gather("variable", "value", SWE, melt_risk) %>%
+        ggplot(
+          aes(
+            x = year_day, 
+            y = value, 
+            col = Year
+          )
+        ) + 
+        annotate(
+          "rect",
+          xmin = graph_date_range()$start, 
+          xmax = graph_date_range()$end,
+          ymin = 0,
+          ymax = Inf,
+          fill = "grey20",
+          alpha = 0.25
+        ) +
+        geom_line() +
+        facet_grid(
+          variable~.,
+          scales = "free_y"
+        ) +
+        theme_classic() +
+        theme(
+          legend.position = "bottom",
+          panel.background = element_blank()
+        ) +
+        labs(
+          x = "Day of the year"
+          # title = "Snow Water Equivalent and Associated Risk",
+          # subtitle = "2015-2018 historical data"
+        )
+      },
+      bg = "transparent", # Does not appear to be working
+      height = 600
+      )
+    )
+  }
+  output$time_series <- plotTimeSeries()
 }
 
 shinyApp(ui, server)

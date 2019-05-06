@@ -20,16 +20,21 @@ library(sf)
 #         import data             # 
 # ------------------------------- # 
 # Load data
-jmt_crossings_simplify <- readRDS("Data/crossing_points.rds")
-jmt_all <- readRDS("Data/jmt_all_trail.rds")
-jmt_main <- jmt_all %>% filter(Type == 'Main')
-jmt_access <- jmt_all %>% filter(Type == 'Access')
-jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
-snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
-snow_depth_2017_jmt <- readRDS("Data/snow_depth_2017.rds")
-precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
-route_info <- readRDS("Data/route_info.rds")
-swe_risk_2015_2018 <- readRDS("Data/swe_risk_2015_2018.rds")
+
+load_data <- function() {
+  jmt_crossings_simplify <- readRDS("Data/crossing_points.rds")
+  jmt_all <- readRDS("Data/jmt_all_trail.rds")
+  jmt_main <- jmt_all %>% filter(Type == 'Main')
+  jmt_access <- jmt_all %>% filter(Type == 'Access')
+  jmt_watersheds <- readRDS("Data/jmt_watersheds.rds")
+  snow_depth_2015_jmt <- readRDS("Data/snow_depth_2015.rds")
+  snow_depth_2017_jmt <- readRDS("Data/snow_depth_2017.rds")
+  precip_2015_jmt <- readRDS("Data/prism_ppt_jmt_clip_2015.rds")
+  route_info <- readRDS("Data/route_info.rds")
+  swe_risk_2015_2018 <- readRDS("Data/swe_risk_2015_2018.rds")
+}
+
+load_data()
 
 # Combine multiple data into a list
 data <- list("snow_depth" = snow_depth_2017_jmt, 

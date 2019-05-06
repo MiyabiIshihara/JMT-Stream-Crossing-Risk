@@ -28,12 +28,12 @@ filtered_crossings <- function(id) {
 collect_crossing_ids <- function(id) {
   return(filtered_crossings(id)$crossing_id)
 }
-route_info$crossing_ids <- route_info$route_id %>% lapply(collect_crossing_ids)
+route_info$crossing_ids <- route_info$route_id %>% sapply(collect_crossing_ids)
 # Retrieve crossing positions
 collect_crossing_positions <- function(id) {
   return(filtered_crossings(id)$crossing_position)
 }
-route_info$crossing_positions <- route_info$route_id %>% lapply(collect_crossing_positions)
+route_info$crossing_positions <- route_info$route_id %>% sapply(collect_crossing_positions)
 # Drop column storing unordered stream ids
 route_info <- route_info %>% select(-streams_crossed, -edge_ids)
 # Save to RDS
