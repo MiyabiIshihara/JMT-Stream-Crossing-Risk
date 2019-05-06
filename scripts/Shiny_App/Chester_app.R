@@ -609,6 +609,8 @@ server <- function(input, output) {
           mutate(Year = as.factor(Year)) %>%
             filter(watershed %in% selected_crossing()$Crossing) %>% 
               gather("variable", "value", SWE, melt_risk) %>%
+              mutate(variable = case_when(variable == "melt_risk" ~ "Risk Score",
+                                          variable == "SWE" ~ "Snow Water Equivalent")) %>% 
         ggplot(
           aes(
             x = year_day, 
@@ -626,6 +628,8 @@ server <- function(input, output) {
           alpha = 0.25
         ) +
         geom_line() +
+        geom_vline(xintercept = selected_crossing()$crossing_day_of_year, 
+                   lty = 2, col = 2, size = 1.2) +  
         facet_grid(
           variable~.,
           scales = "free_y"
