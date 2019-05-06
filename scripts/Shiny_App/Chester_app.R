@@ -402,6 +402,11 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
   
+  variable_names <- c("snow_depth" = "Snow Depth (mm)", "precip" = "Precipitation (mm)")
+  group_names <- c("snow_depth" = "Snow Depth", "precip" = "Precipitation")
+  # obtain maximum value of a selected variable 
+  max_values <- c("snow_depth" = 3000, "precip" = 20)
+  
   # Compile route info based on the entered start and end th/date
   route <- reactive({compileRoute(input$start_th, input$end_th, input$start_date, input$end_date, jmt_crossings, jmt_all, swe_risk_2015_2018, route_info)})
   
@@ -427,7 +432,7 @@ server <- function(input, output) {
     pal <- colorNumeric(
       # "viridis",
       palette = colorRamp(c("#FFFFFF", "#014175"), interpolate = "spline"),
-      domain=c(0,3000),
+      domain = c(0, max_values[input$raster_selection]),
       na.color="transparent"
     )
     
@@ -458,7 +463,7 @@ server <- function(input, output) {
       addLegend(
         pal = pal,
         values = values(selectedRaster()),
-        title = "Snow Depth (mm)"
+        title = variable_names[input$raster_selection][[1]]
       ) %>% ## CHANGE
       
       # Map access trails
