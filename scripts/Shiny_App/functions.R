@@ -1,5 +1,5 @@
 # UI component to select trip by start and end point/date
-tripSelector <- function(){
+tripSelector <- function(route_info){
   fluidRow(
     column(
       8,
@@ -152,7 +152,7 @@ greenIconSemi <- icon("www/icon_green_semi.png", "www/icon2x_green_semi.png")
 
 
 # Compile the route between start and end trailheads
-compileRoute <- function(start_th, end_th, start_date, end_date, jmt_crossings, jmt_all, swe_risk_2015_2018) {
+compileRoute <- function(start_th, end_th, start_date, end_date, jmt_crossings, jmt_all, swe_risk_2015_2018, route_info) {
   # Get shortest routes with that start and end
   route <- route_info %>%
     filter(`entry trailhead`==start_th & `exit trailhead`==end_th) %>%
