@@ -49,7 +49,7 @@ crossingSelector <- function(route) {
       fluidRow(
         sliderTextInput(
           inputId = 'selected_crossing',
-          label = "Scroll between crossings along your trip:",
+          label = "Scroll through stream crossings along your trip:",
           choices = slider_values,
           selected = slider_values[c(1)],
           width = '100%',
@@ -81,14 +81,17 @@ selectRaster <- function(crossing, raster_data, raster_selection) {
 
 # UI Component to select the snow depth vs precip raster
 rasterSelector <- function(){
-  radioButtons(
-    inputId = "raster_selection", 
-    label = "",
-    choices = c(
-      "Snow Depth" = "snow_depth", 
-      "Precipitation" = "precip"
-    ), 
-    selected = "snow_depth"
+  fluidRow(
+    radioButtons(
+      inputId = "raster_selection", 
+      label = "Chose reference layer:",
+      choices = c(
+        "Snow Depth" = "snow_depth", 
+        "Precipitation" = "precip"
+      ), 
+      selected = "snow_depth",
+      width = 320
+    )
   )
 }
 
