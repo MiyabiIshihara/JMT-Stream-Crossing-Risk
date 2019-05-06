@@ -16,6 +16,7 @@ library(markdown)
 library(sf)
 library(shinyWidgets)
 
+
 # ------------------------------- # 
 #         import data             # 
 # ------------------------------- # 
@@ -307,6 +308,10 @@ ui <- dashboardPage(
 # ------------------------------- # 
 
 server <- function(input, output) {
+  variable_names <- c("snow_depth" = "Snow Depth (mm)", "precip" = "Precipitation (mm)")
+  group_names <- c("snow_depth" = "Snow Depth", "precip" = "Precipitation")
+  # obtain maximum value of a selected variable 
+  max_values <- c("snow_depth" = 3000, "precip" = 20) 
   
   # Prepare a custom day selector UI based on the number of trip days
   output$trip_day_selector <- renderUI({
@@ -339,7 +344,7 @@ server <- function(input, output) {
   # Select raster data based on trip date and environmental variable
   selectedData <- reactive({
     map_date = input$start_date + input$trip_day - 1
-    selectedData <- data[[paste0(input$variable)]]
+    selectedData <- data[[input$variable]]
     selectedData <- selectedData[[yday(map_date)]]
     selectedData
   })
@@ -432,8 +437,8 @@ server <- function(input, output) {
     pal <- colorNumeric(
       # "viridis",
       palette = colorRamp(c("#FFFFFF", "#014175"), interpolate = "spline"),
-      domain=c(0,3000),
-      na.color="transparent"
+      domain = c(0, max_values[input$variable]),
+      na.color = "transparent"
     )
     
     leaflet() %>%
@@ -453,18 +458,17 @@ server <- function(input, output) {
       # Load raster layers
       addRasterImage(
         selectedData(),
-        # colors = pal,
         colors = pal,
-        opacity = 0.5,
+        opacity = 0.6,
         maxBytes = 10 * 1024 * 1024,
-        group = "Snow Depth",
+        group = group_names[input$variable][[1]] 
       ) %>%
       
       addLegend(
         pal = pal,
         values = values(selectedData()),
-        title = "Snow Depth (mm)"
-      ) %>% ## CHANGE
+        title = variable_names[input$variable][[1]] 
+      ) %>% 
       
       # Map access trails
       addPolylines(
@@ -519,11 +523,13 @@ server <- function(input, output) {
       ) %>%
       
       addLayersControl(overlayGroups = c("Snow Depth",
+                                         "Precipitation", 
                                          "JMT Access Trails",
                                          "JMT Main Trail",
                                          "JMT Main Stream Crossings",
                                          "Main Crossing Watersheds",
-                                         "Selected Route"))
+                                         "Selected Route"), 
+                       options = layersControlOptions(collapsed = TRUE)) 
   }) # end of leaflet function
 }
 
