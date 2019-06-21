@@ -1,0 +1,22 @@
+Call with John Ladd 5/17/19
+
+Spreadsheet of all entry and exit trailheads
+	- John working on same thing, probably some stuff that's duplicated
+	- Chester has entry and exits, junctions, and both JMT mileage and total mileage
+	- Potentially remove some of the trailheads that people use to game the system
+
+App demonstration
+	- Connect with Elizabeth Wenk (now in Australia) to double check that 
+	- People who are starting early/late and could potentially take photos of all the crossings
+		- One straight across the stream, one upstream, one downstream
+	- Something to resolve overlap of watersheds: only show one watershed at a time
+	- Being able to click on stream crossing to select it
+	- Remove certain trailheads that encourage people to game the permit system
+	- Automatically update end date when changing start date
+	- Snow data product? Check with Laurel
+		- Switch to using MODIS snow cover?
+		- John Ladd knows someone using it
+	- More narrative description of what plots are showing (red line and gray box)
+	- Correction factor for elevation of upstream watersheds? 
+		- Snow is melting off too early in the year
+	- John supportive of publicizing it, but just wants to ensure uncertainty is appropriately communicated

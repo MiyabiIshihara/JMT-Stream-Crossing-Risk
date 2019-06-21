@@ -31,8 +31,8 @@ require(htmltools)
 
 # Make icon for stream crossings ############      
 crossingIcon <- makeIcon(
-  iconUrl = "Plots_Viz/River_Icon/Artboard 1.png",
-  iconRetinaUrl = "Plots_Viz/River_Icon/Artboard 1@2x.png",
+  iconUrl = "scripts/Shiny_App/www/icon.png",
+  iconRetinaUrl = "scripts/Shiny_App/www/icon2x.png",
   iconHeight = 35, iconWidth = 20 
 )
 
